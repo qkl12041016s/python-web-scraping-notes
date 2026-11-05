@@ -1,0 +1,53 @@
+\chapter{XPath 与选择器回归：找得到，还要找得准}\label{ch:xpath}
+\begin{tcolorbox}[title=章首知识地图,colframe=Ink]
+结构定位 $\longrightarrow$ 节点作用域 $\longrightarrow$ 属性与文本 $\longrightarrow$ 样本回归。
+\end{tcolorbox}
+
+\begin{tcolorbox}[title=学习目标与前置知识,colframe=Ink!65,colback=Ink!2]
+前置：第 3 章的树结构。目标：比较相对 XPath 与全页搜索的作用域。\par
+输入：固定 HTML 树；输出：节点文本与链接。
+\end{tcolorbox}
+
+\section{XPath 是树路径，不是神奇坐标}
+\texttt{//article} 从当前节点所属文档的根开始搜索文章节点；在已定位的文章节点内部，应使用 \texttt{.//a/@href}，只取该节点后代的链接。这个点很重要：忘掉它，循环里每条记录都可能拿到整页第一条链接，结果整齐得令人怀疑。
+
+\begin{definition}{绝对与相对作用域}
+从文档根部开始的路径适合确定页面级区域；从当前节点开始的相对路径适合逐条记录提取。\texttt{.//} 明确把搜索限制在当前节点的后代。无论用 CSS 还是 XPath，先缩小作用域再取字段。
+\end{definition}
+
+\begin{center}\small
+\begin{tabularx}{\textwidth}{@{}p{.30\textwidth}X@{}}
+\toprule
+XPath 写法 & 在卡片节点上求值时\\\midrule
+\texttt{//a/@href} & 从所属文档根搜索，可能取到别的卡片链接\\
+\texttt{.//a/@href} & 只搜索当前卡片后代\\
+\texttt{./h2/text()} & 只取直接 \texttt{h2} 的直接文本\\
+\texttt{.//h2//text()} & 合并嵌套标签中的标题文本\\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{用 lxml 处理本地页面}
+示例从两张卡片提取标题和链接；一张没有链接的卡片会被跳过。函数把“合法 HTML 中没有卡片”返回为空列表，把“响应正文全空”报为错误。多类名与嵌套标题也有单独测试。\texttt{lxml.html} 能容忍常见的不完整 HTML，但结果数量仍须验收。
+
+\begin{example}{相对 XPath 抽取}{基础}
+\VerbatimInput{examples/ch04_xpath.py}
+\end{example}
+
+\begin{method}{给选择器写回归样本}
+保存一份许可范围内的脱敏页面样本。断言卡片数、必填字段与关键 URL；页面改版时更新样本和选择器，并说明变化原因。不要把“选择器返回了非空列表”当作通过条件，广告卡片也能满足它。
+\end{method}
+
+\section{选择器与正则的分工}
+先用 DOM 选择器定位具体节点，再用正则处理节点内的日期、价格或编号。若字段已有稳定属性，优先读取属性。一个跨整页的大正则表达式很擅长在演示页上成功，也很擅长在真实页面里默默失效。
+
+\begin{tcolorbox}[title=本章验收,colframe=Teal,colback=Teal!3]
+运行 XPath 示例得到两条配对记录；\texttt{<main></main>} 得到零条，空响应正文报错。
+\end{tcolorbox}
+
+\section{练习}
+\begin{enumerate}[label=\arabic*.]
+\item 去掉示例中的 \texttt{.}，观察提取结果是否重复或错配。
+\item 给卡片增加 \texttt{data-id}，改用属性作为稳定标识。
+\item 为“只有一张卡片的页面”与“空页面”各写一个断言。
+\end{enumerate}

@@ -1,0 +1,56 @@
+\chapter{方法速查}\label{app:quickref}
+\section{从现象回到问题层}
+\begin{center}
+\begin{tabularx}{\textwidth}{@{}p{.23\textwidth}X X@{}}
+\toprule
+现象 & 优先检查 & 不宜马上做的事\\
+\midrule
+请求超时 & 域名、网络、超时与重试范围 & 无限重试\\
+返回登录页 & 最终 URL、会话与访问权限 & 把登录页当数据解析\\
+字段为空 & 样本响应、选择器、字段契约 & 全部填成空字符串\\
+翻页重复 & 游标、去重键、停止条件 & 只增加循环次数\\
+结果偏少 & 页数、异常统计、缺失字段 & 只看退出码\\
+运行太慢 & 响应时间、限流、解析与存储 & 直接拉满并发\\
+会话失效 & 凭据有效期、授权范围、登录流程 & 公开记录令牌\\
+文件损坏 & 响应类型、大小、摘要与写入过程 & 只改文件扩展名\\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{工具选择}
+\begin{center}
+\begin{tabularx}{\textwidth}{@{}p{.30\textwidth}X@{}}
+\toprule
+任务 & 常用起点\\
+\midrule
+单次 HTTP 请求 & Requests，显式超时与状态检查\\
+HTML 字段抽取 & HTMLParser 或 Beautiful Soup，配固定样本测试\\
+JSON 接口分页 & 明确游标与停止条件，校验字段类型\\
+结构化存储 & JSON Lines、CSV 或 SQLite，按使用场景选\\
+动态 DOM & 先查接口；确需浏览器再用 Playwright\\
+多页调度 & Scrapy，分清请求与数据记录\\
+脚本诊断 & 网络面板、控制台、调用栈与脱敏样本\\
+多机调度 & 持久化队列、共享去重与幂等写入\\
+长期维护 & 样本回归、依赖版本、质量指标与报警\\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{一次采集的最小验收}
+写下本次目标范围、允许访问的来源、应有字段、成功与失败请求数、去重前后记录数、缺失字段数和停止原因。随机查看若干记录的原页面与输出是否对应。笔记里的代码是起点；真实数据的可信度，最后由这些检查给出。
+
+\section{失败样本速查}
+\begin{center}\small
+\begin{tabularx}{\textwidth}{@{}p{.27\textwidth}X@{}}
+\toprule
+本地样本 & 可验证的处置\\\midrule
+200 返回登录 HTML & 按内容类型和页面结构报错，不能当作零条文章\\
+404 & 核对资源地址与权限，不拿失败当分页终点\\
+429、503 & 记录状态；按接口约定等待或有限退避\\
+空标题、编号或原始链接 & 写入前拒绝；本页检查点不推进\\
+重复游标或下一页 & 报出循环并停止，不无限请求\\
+第一页写入后中断 & 用同一文件库恢复，只补未提交的页面\\
+\bottomrule
+\end{tabularx}
+\end{center}
+成功路径给出结果；失败路径给出证据和停止原因。对应可运行样本见附录 B，断言在随书 \texttt{tests/} 目录。

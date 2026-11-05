@@ -1,0 +1,79 @@
+\chapter{从网页到数据}\label{ch:workflow}
+\begin{tcolorbox}[title=章首知识地图,colframe=Ink]
+确定字段 $\longrightarrow$ 发出请求 $\longrightarrow$ 理解响应 $\longrightarrow$ 解析页面 $\longrightarrow$ 校验记录 $\longrightarrow$ 保存结果。
+\end{tcolorbox}
+
+\begin{tcolorbox}[title=学习目标与前置知识,colframe=Ink!65,colback=Ink!2]
+前置：会读 URL 与 HTML。目标：先写字段契约，再决定请求、解析和停止条件。\par
+输入：固定页面和允许域名；输出：去重后的文章链接。
+\end{tcolorbox}
+
+\section{先定义数据，再写采集代码}\label{sec:workflow:target}
+假设要收集一个公开文章列表。页面上有标题、详情链接和发布日期；真正的目标不是整页 HTML，而是一组字段明确的记录。例如：
+\begin{center}
+\begin{tabular}{@{}lll@{}}
+\toprule
+字段 & 类型 & 示例\\
+\midrule
+标题 & 字符串 & 入门指南\\
+详情链接 & 绝对 URL & \url{https://example.org/articles/intro}\\
+发布日期 & 日期 & 2026-11-05\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+先确定字段、类型和缺失值处理方式，才知道解析器应该从页面中寻找什么。记录的结构也为后续去重和质量检查提供依据。
+
+\begin{definition}{网络爬虫与页面解析}
+网络爬虫按规则取得页面或接口响应，并组织后续访问；解析器从响应中提取所需字段。二者常出现在同一程序中，但职责不同：请求失败应由采集流程处理，字段缺失应由解析与校验流程处理。
+\end{definition}
+
+\begin{method}{从需求写出采集契约}
+写下起始页面、允许访问的域名、需要的字段、每个字段的类型、缺失值策略和停止条件。对一条记录先手工确认来源位置，再实现自动提取。
+\end{method}
+
+\section{理解请求与响应}\label{sec:workflow:http}
+浏览器打开页面时，客户端向服务器发出请求，服务器返回响应。请求含目标 URL、方法与头部；响应含状态、头部与正文。爬虫通常先判断响应是否可用，再决定把正文当作 HTML、JSON 或其他格式处理。
+
+\begin{proof}
+把“取得网页”和“解析网页”分开，可以明确错误发生的位置。网络超时意味着没有得到完整响应；状态异常意味着服务器没有按预期交付资源；字段提取失败则可能是页面结构变化。三种情形的修复方法不同，不能都用空字符串代替。
+\end{proof}
+
+\begin{warning}
+不要把 URL 字符串直接当作“本站链接”。相对链接可以借助基准 URL 合成完整地址；绝对链接可能指向其他站点。合成之后仍要检查协议和主机名。
+\end{warning}
+
+\section{一个可运行的本地解析示例}\label{sec:workflow:example}
+下面的示例不访问互联网。它从一段固定 HTML 中提取链接，把相对地址转换为绝对地址，并排除非 HTTP 链接。先在本地验证解析逻辑，后续再接入真实响应，更容易分辨问题来自网络还是页面结构。
+
+\begin{example}{提取文章链接}{基础}
+输入包含相对链接、绝对链接、同一文章的重复链接和一个 JavaScript 链接。输出按首次出现顺序保留允许域名下的 HTTP 或 HTTPS 地址；去掉片段后再去重。完整代码保存在 \texttt{examples/ch01\_links.py}：
+\par\medskip
+\VerbatimInput{examples/ch01_links.py}
+\par\medskip
+运行 \texttt{python examples/ch01\_links.py} 后，输出为：
+\begin{Verbatim}[numbers=none]
+https://example.org/articles/intro
+https://example.org/articles/advanced
+\end{Verbatim}
+\end{example}
+
+\subsection{代码为什么这样写}
+\texttt{HTMLParser} 在遇到起始标签时调用 \texttt{handle\_starttag}。示例只处理 \texttt{a} 标签，从属性列表中取得 \texttt{href}。\texttt{urljoin} 负责补全相对地址；\texttt{urlsplit} 拆出协议和主机名；\texttt{urldefrag} 去掉同页片段，\texttt{seen} 记录已输出的地址。输入页面可以放入绝对链接，补全地址本身不等于限制访问范围。
+
+\begin{examtip}
+解析器的输入是网页源码，输出是候选记录。候选记录进入存储之前，仍应检查必填字段、去重键和来源域名。解析成功不代表数据一定正确。
+\end{examtip}
+
+\begin{tcolorbox}[title=本章验收,colframe=Teal,colback=Teal!3]
+运行链接示例；只留下允许域名的两条地址，且没有片段标识。
+\end{tcolorbox}
+
+\section{小结与练习}\label{sec:workflow:exercise}
+本章把爬虫拆为六个可检查的步骤：定义目标、获取响应、识别格式、提取字段、校验记录、保存结果。把每一步的输入和输出写清楚，比把所有逻辑塞进一个循环更便于定位错误。
+
+\begin{enumerate}[label=\arabic*.]
+\item 给“标题、作者、日期、详情链接”的采集任务写出字段类型，并说明哪些字段必须存在。
+\item 将示例中的同域名限制改为允许两个指定域名，检查绝对链接是否会绕过限制。
+\item 再加入一个空 \texttt{href} 和重复链接，验证空链接被跳过、同一地址只输出一次。
+\end{enumerate}

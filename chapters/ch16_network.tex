@@ -1,0 +1,45 @@
+\chapter{代理与网络路径：换条路不等于有路权}\label{ch:network}
+\begin{tcolorbox}[title=章首知识地图,colframe=Ink]
+DNS 与连接 $\longrightarrow$ 代理 $\longrightarrow$ TLS 校验 $\longrightarrow$ 失败分类与重试。
+\end{tcolorbox}
+
+\begin{tcolorbox}[title=学习目标与前置知识,colframe=Ink!65,colback=Ink!2]
+前置：HTTP 与 TLS 基础。目标：把代理、证书校验、限流与访问权分开。\par
+输入：状态和异常类型；输出：有限重试策略。
+\end{tcolorbox}
+
+\section{代理在链路中的位置}
+代理位于客户端与目标服务之间，可以用于组织企业出口、调试或合规网络环境。它改变请求经过的路径，不改变资源的授权条件。若站点明确拒绝自动访问，轮换出口地址不应成为默认解决方案。
+
+\begin{method}{排查网络问题的顺序}
+先确认域名解析、连接建立、TLS 校验、HTTP 响应，再核对正文格式。代理配置只能针对具体网络问题使用；不要把所有超时都归咎于“代理不够多”。
+\end{method}
+
+\section{TLS 不能为了省事关掉}
+HTTPS 的证书校验用于确认通信对端。遇到证书错误，应检查系统时间、根证书、企业代理和目标地址；在生产采集中把 \texttt{verify=False} 当万能补丁，会把身份校验一起扔掉。
+
+\section{有限重试比无限等待可靠}
+GET 等幂等请求遇到暂时性故障，可设置有限重试与退避；写入型请求不能未经判断就自动重放。下例启动本地服务：\texttt{/flaky} 两次返回 503、第三次成功；\texttt{/always} 始终返回 503，第三次后停止；POST 的 503 只请求一次。示例只把策略挂到 \texttt{http://} 前缀，实际接口仍需按契约配置。
+
+\begin{method}{三类重试额度}
+\texttt{connect} 处理建立连接前的故障；\texttt{read} 处理请求发出后的读取故障，重放风险更高；\texttt{status} 处理指定状态码。\texttt{allowed\_methods=\{"GET"\}} 约束读取和状态码重试，不能据此断言所有 POST 连接错误都绝不重试。本例设置 \texttt{read=0}；\texttt{total=2} 表示初次请求之外最多再试两次。
+\end{method}
+
+\begin{example}{检查重试策略}{基础}
+\VerbatimInput{examples/ch16_retry.py}
+\end{example}
+
+\begin{warning}
+429 表示服务端要求减速。即使客户端库可以自动重试，也要核对等待指示、总请求量与站点规则。重试不是“把拒绝再问三遍”。
+\end{warning}
+
+\begin{tcolorbox}[title=本章验收,colframe=Teal,colback=Teal!3]
+运行本地服务示例；成功 GET 与持续 503 的 GET 各请求三次，POST 状态码请求一次；持续失败必须停止。
+\end{tcolorbox}
+
+\section{练习}
+\begin{enumerate}[label=\arabic*.]
+\item 写出“DNS 失败”“证书错误”“HTTP 404”“字段为空”分别属于哪一层。
+\item 说明代理地址里的用户名与口令为何不应进入日志。
+\item 设计对 429 的降速动作，并说明何时应停止采集。
+\end{enumerate}

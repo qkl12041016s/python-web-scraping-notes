@@ -1,0 +1,39 @@
+\chapter{调试与逆向阅读：先画依赖，再碰代码}\label{ch:diagnostics}
+\begin{tcolorbox}[title=章首知识地图,colframe=Ink]
+观察请求 $\longrightarrow$ 找到发起代码 $\longrightarrow$ 追踪参数来源 $\longrightarrow$ 用本地样本验证。
+\end{tcolorbox}
+
+\begin{tcolorbox}[title=学习目标与前置知识,colframe=Ink!65,colback=Ink!2]
+前置：网络面板与调用栈。目标：按请求、响应、解析、写入顺序排错。\par
+输入：脱敏的请求和响应样本；输出：故障层级。
+\end{tcolorbox}
+
+\section{先定位问题层级}
+数据没出现，可能是请求没有发出、响应格式变了、脚本没有执行，或选择器找错节点。开发者工具先看网络面板和控制台，再看调用栈与脚本。直接盯着一大团压缩 JavaScript 猜参数，往往像从一盘面条里寻找昨天丢的钥匙。
+
+\begin{method}{记录可复现的诊断链}
+保存脱敏后的请求结构与样本响应，标出字段从哪一层产生。对动态参数，追踪输入、变换和输出，写成小表：时间戳来自哪里，路径如何规范化，哪一步做编码。每次只改变一个输入，比同时改五处更容易看清因果。
+\end{method}
+
+\begin{example}{把三种失败分开报}{基础}
+下面的样本全部在内存中。200 登录页是响应格式错误；缺少编号是字段契约错误；游标反复出现是分页错误。三者都不该写成一条空记录。
+\VerbatimInput{examples/ch14_diagnostics.py}
+\end{example}
+
+\section{诊断后的最小回归}
+确认故障层级后，把触发问题的脱敏样本留下：200 登录页应报格式错误，缺必填字段应报契约错误，重复游标应立即停止。修复解析器后再跑这三类样本；只看一次正常页面，相当于给漏水的屋顶只挑晴天验收。
+
+\begin{warning}
+登录、验证码、签名或访问限制属于权限和流程问题。先核对公开接口、数据导出与授权方式，不把绕过限制当作排错步骤。脚本结构分析留到第\ref{ch:ast}章。
+\end{warning}
+
+\begin{tcolorbox}[title=本章验收,colframe=Teal,colback=Teal!3]
+运行诊断示例，给出 200 登录页、空字段和重复分页的不同处置。
+\end{tcolorbox}
+
+\section{练习}
+\begin{enumerate}[label=\arabic*.]
+\item 用一张表记录某个本地演示页面的请求、响应和提取字段。
+\item 为“状态为 200、正文却是登录页”写出一个应失败的断言。
+\item 解释“请求成功但字段为空”应先检查哪两类证据。
+\end{enumerate}

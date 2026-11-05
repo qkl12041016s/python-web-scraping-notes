@@ -1,0 +1,43 @@
+\begin{titlepage}\thispagestyle{empty}
+\begin{tikzpicture}[remember picture,overlay]
+  \begin{scope}
+    \clip(current page.north west) rectangle ([yshift=-76mm]current page.north east);
+    \node[inner sep=0pt,anchor=center] at ([yshift=-38mm]current page.north)
+      {\includegraphics[width=\paperwidth]{assets/cover_network.png}};
+  \end{scope}
+  \fill[CoverTeal]([yshift=-76mm]current page.north west)
+    rectangle ([yshift=-88mm]current page.north east);
+  \node[anchor=north west,inner sep=0pt,text=black] at ([xshift=18mm,yshift=-109mm]current page.north west)
+    {\fontsize{32}{40}\selectfont\sffamily\bfseries Python 网络爬虫};
+  \node[anchor=north west,inner sep=0pt,text=black] at ([xshift=19mm,yshift=-129mm]current page.north west)
+    {\fontsize{23}{30}\selectfont\sffamily\bfseries 从请求到数据};
+  \node[anchor=north west,inner sep=0pt,text=Ink] at ([xshift=20mm,yshift=-151mm]current page.north west)
+    {\fontsize{18}{23}\selectfont\bfseries Python Web Scraping Notes};
+  \node[anchor=north west,inner sep=0pt,text=black!58,align=left] at ([xshift=23mm,yshift=-177mm]current page.north west)
+    {\fontsize{12}{24}\selectfont
+      \begin{tabular}{@{}l@{\;}l@{}}
+      作者：&雪落长安无声\\
+      日期：&2026.11.05\\
+      版本：&2026 年修订
+      \end{tabular}};
+  \begin{scope}[shift={([xshift=-39mm,yshift=-207mm]current page.north east)}]
+    \foreach \x/\y in {-1.2/0.4,-0.5/1.1,0.5/1.4,1.3/0.5,0.7/-0.5,-0.6/-0.8}{
+      \draw[CoverGold!65,line width=.5pt] (0,0)--(\x,\y);
+      \fill[CoverGold] (\x,\y) circle (2.2pt);
+    }
+    \fill[Teal] (0,0) circle (5pt);
+  \end{scope}
+  \node[anchor=center,text=black,align=center] at ([yshift=37mm]current page.south)
+    {\fontsize{12}{19}\selectfont\itshape 从网页到数据，每一步都可解释、可复现。};
+\end{tikzpicture}
+\null
+\end{titlepage}
+\thispagestyle{empty}\vspace*{32mm}
+\begin{center}
+{\LARGE\bfseries Python 网络爬虫：从请求到数据}\par\vspace{15mm}
+原理、解析与工程实践\par\vspace{22mm}
+{\large 雪落长安无声}\par\vspace{18mm}
+请求 · 解析 · 清洗 · 存储\par\vspace{12mm}
+2026.11.05
+\end{center}\vfill
+从可复现的小样本出发，依次练习请求、解析、存储与排错。代码示例与正文分开保存，便于逐行运行和核对。

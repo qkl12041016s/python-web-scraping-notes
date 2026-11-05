@@ -1,0 +1,57 @@
+\chapter{端到端小项目：让数据走完全程}\label{ch:project}
+\begin{tcolorbox}[title=章首知识地图,colframe=Ink]
+本地服务 $\longrightarrow$ 分页请求 $\longrightarrow$ 卡片解析 $\longrightarrow$ 字段校验 $\longrightarrow$ SQLite 去重。
+\end{tcolorbox}
+
+\begin{tcolorbox}[title=学习目标与前置知识,colframe=Ink!65,colback=Ink!2]
+前置：前述 HTTP、HTML 与 SQLite 章节。目标：让请求、解析、校验、写入串成可重跑链路。\par
+输入：本地两页列表；输出：三条唯一记录。
+\end{tcolorbox}
+
+\section{项目目标与验收}
+目标是从两页本地文章列表中取得编号、标题和详情链接，写入文件数据库；第二页故意重复编号 2。流程依次完成请求、分页、解析、字段校验、持久写入、检查点恢复和运行统计。所有页面由脚本在本机提供；先把可控样本跑通，再考虑真实站点。
+
+\begin{method}{验收先行}
+运行后应看到四条候选、三条唯一记录；具体结果是 \texttt{1/First/item/1}、\texttt{2/Second/item/2}、\texttt{3/Third/item/3}。编号、标题文本和原始 \texttt{href} 均须非空；请求与详情链接须保持原协议、主机和端口。仅检查记录数，空标题也能笑着过关。
+\end{method}
+
+\section{完整可运行代码}
+依赖 \texttt{requests} 与 \texttt{beautifulsoup4}。\texttt{get\_page} 关闭自动跳转，每一跳先核对来源再请求；状态或类型错误立即报出。\texttt{parse\_page} 在 \texttt{urljoin} 前检查原始编号、标题和链接。\texttt{crawl} 将本页记录与下一页检查点放在同一 SQLite 事务中，连接退出时显式关闭。默认数据库在 \texttt{build/ch20\_articles.sqlite3}。
+
+\begin{example}{两页列表采集}{综合}
+\VerbatimInput{examples/ch20_pipeline.py}
+\end{example}
+
+从项目根目录连续运行 \texttt{python examples/ch20\_pipeline.py} 两次，均应输出 \texttt{pages=2, unique\_items=3}，并显示 \texttt{seen=4}。第二次不是重新建一张表，而是按稳定编号更新同一批记录。运行报表的请求数和检查点数帮助说明程序做了什么；最终仍须核对三行的编号、标题与链接路径。
+
+\begin{center}\small
+\begin{tabularx}{\textwidth}{@{}p{.30\textwidth}X@{}}
+\toprule
+失败样本 & 应观察到的行为\\\midrule
+标题全空格、编号空、原始链接空 & 写入前报字段错误；坏页不推进检查点\\
+第二页返回 404 或登录页 & 报状态或内容错误；第一页已提交的数据保留\\
+第二页再次指向第一页 & 检测重复页；不把循环当作完成\\
+跳转到另一个本地端口 & 下一跳发出前拒绝，外侧服务请求数为零\\
+第一页提交后模拟中断 & \texttt{resume=True} 跳过已提交页，补齐第二页\\
+\bottomrule
+\end{tabularx}
+\end{center}
+这些情形均由 \texttt{tests/test\_revision.py} 使用本地服务复现。尤其是跨来源跳转，事后检查最终 URL 已经太晚：请求可能早就发出去了。
+
+\section{从演示脚本到长期任务}
+真实任务仍需确认站点允许的访问范围、字段契约、保留期限与错误统计。文件库能重跑，\texttt{CREATE TABLE IF NOT EXISTS} 不能替代将来修改表结构时的迁移。页面改版后，先更新脱敏样本与解析测试，再小范围运行；不要直接在生产循环里一边猜一边改。
+
+\begin{warning}
+把真实账号、Cookie 或令牌写进示例文件会让“可复现”变成“可泄露”。需要认证时使用环境变量或受控密钥存储，并给公开样例提供无凭据的替代输入。
+\end{warning}
+
+\begin{tcolorbox}[title=本章验收,colframe=Teal,colback=Teal!3]
+连续运行两次，均得到三条具体且正确的记录；运行失败样本与中断恢复测试，坏字段不入库、跨来源请求不发生、未完成页面能补齐。
+\end{tcolorbox}
+
+\section{练习}
+\begin{enumerate}[label=\arabic*.]
+\item 在第二页加入一条与第一页相同编号的记录，验证唯一约束。
+\item 故意删除一张卡片的链接，说明程序如何记录或处理缺失字段。
+\item 按第\ref{ch:delivery}章的命令，在全新的 \texttt{build/job.sqlite3} 上模拟第二页失败，再用同一路径加 \texttt{--resume} 补齐，核对检查点与三条记录。
+\end{enumerate}

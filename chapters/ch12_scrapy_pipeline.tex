@@ -1,0 +1,41 @@
+\chapter{Scrapy Pipeline：把验证放在出口前}\label{ch:pipeline}
+\begin{tcolorbox}[title=章首知识地图,colframe=Ink]
+Spider 产出记录 $\longrightarrow$ Pipeline 清洗与校验 $\longrightarrow$ Feed 导出或数据库写入。
+\end{tcolorbox}
+
+\begin{tcolorbox}[title=学习目标与前置知识,colframe=Ink!65,colback=Ink!2]
+前置：第 11 章的 Item 流。目标：把重复清洗规则放到 Pipeline。\par
+输入：标题和链接字典；输出：校验后的 Item。
+\end{tcolorbox}
+
+\section{Spider 不该包办一切}
+Spider 负责知道“这一页的字段在哪”。通用清洗、必填字段检查、去重与保存适合放在 Pipeline。这样页面结构变了改 Spider，字段规则变了改 Pipeline；各修各的，不必在一个回调里翻山越岭。
+
+\begin{definition}{Pipeline 的输出约定}
+一个 Pipeline 组件处理记录后，应返回记录供后续组件使用；若记录不合格，可以明确抛出 \texttt{DropItem}。遗漏返回值会让后续组件拿到空对象，这种错比显式报错更难看。
+\end{definition}
+
+\section{离线测试清洗规则}
+下面先直接调用 Pipeline 方法：标题首尾空格被去掉，空标题被拒绝，空 URL 也被拒绝。随后运行第\ref{ch:scrapy}章的双页 Spider；其 \texttt{ITEM\_PIPELINES} 设置真正启用了同一组件，第二页的空标题不会进入导出文件。
+
+\begin{example}{校验标题字段}{基础}
+\VerbatimInput{examples/ch12_pipeline.py}
+\end{example}
+
+\section{导出与存储不要混淆}
+Scrapy 的 Feed Export 可以直接写 JSON、JSON Lines、CSV 等格式，适于先验收数据；需要事务、唯一约束或跨任务查询时，再引入数据库写入组件。先输出一份能检查的文件，往往比第一天就搭消息队列更有进展。
+
+\begin{method}{组件验收}
+检查 Pipeline 是否真正启用，记录进入与丢弃数量，核对导出文件是否可解析、字段是否完整。框架日志里“完成”只说明调度结束，不说明每条记录都合格。
+\end{method}
+
+\begin{tcolorbox}[title=本章验收,colframe=Teal,colback=Teal!3]
+直接运行清洗脚本看到 \texttt{dropped blank title}；再运行双页 Spider，三个候选记录仅导出两条有效记录。
+\end{tcolorbox}
+
+\section{练习}
+\begin{enumerate}[label=\arabic*.]
+\item 给 Pipeline 增加 URL 非空检查，并用空 URL 样本验证。
+\item 解释 Pipeline 为什么必须返回处理后的记录。
+\item 比较 Feed Export 与 SQLite 在去重和查询方面的差别。
+\end{enumerate}

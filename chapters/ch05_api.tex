@@ -1,0 +1,40 @@
+\chapter{JSON 接口与游标分页}\label{ch:api}
+\begin{tcolorbox}[title=章首知识地图,colframe=Ink]
+观察请求 $\longrightarrow$ 确认响应结构 $\longrightarrow$ 翻页 $\longrightarrow$ 判重与停止。
+\end{tcolorbox}
+
+\begin{tcolorbox}[title=学习目标与前置知识,colframe=Ink!65,colback=Ink!2]
+前置：JSON 对象与列表。目标：让游标、去重键与停止条件相互独立。\par
+输入：带游标的页面；输出：唯一编号列表。
+\end{tcolorbox}
+
+\section{页面之外还有接口}
+浏览器显示的列表，可能来自初始 HTML，也可能由随后发出的请求取得。先在开发者工具的网络面板中观察请求 URL、方法、参数和响应，再判断数据来源。不要一看到页面上有旋转的小圈，就宣布“必须上浏览器自动化”；小圈不负责证明技术路线。
+
+\begin{definition}{分页状态}
+页码、偏移量和游标都在表达“从哪里继续”。页码适合固定页序；偏移量常配合每页条数；游标通常由服务端返回，应原样用于下一次请求。三者不是可以随意互换的整数。
+\end{definition}
+
+\section{如何知道该停了}
+可靠的停止条件可来自明确的 \texttt{next} 字段、空数据页、总页数或已到达目标范围。只用“请求失败”来结束，容易把服务器故障误认为采集完成。对游标还应检查是否重复，否则服务端返回同一个游标时，程序会认真地原地踏步。
+
+\begin{example}{游标分页的离线模拟}{基础}
+示例在本机启动 JSON 服务，客户端依服务端返回的游标真正发出三次 HTTP 请求。它校验状态与列表形状、去重记录编号，并检测重复游标。若第二页返回 404，\texttt{raise\_for\_status()} 会报错；不能把它当作自然结束。
+\par\medskip
+\VerbatimInput{examples/ch05_cursor.py}
+\end{example}
+
+\begin{method}{写分页循环前先列四件事}
+起始状态、下一页状态从哪里来、何时停止、重复数据如何处理。四件事写在纸上只占一行，漏掉其中一件，调试可能占一下午。
+\end{method}
+
+\begin{tcolorbox}[title=本章验收,colframe=Teal,colback=Teal!3]
+运行本地 HTTP 示例得到编号 1 至 4；把末页的 \texttt{next} 改回 \texttt{p2} 时必须报错并停止。
+\end{tcolorbox}
+
+\section{练习}
+\begin{enumerate}[label=\arabic*.]
+\item 把第三页的游标改成第二页的游标，说明示例会怎样报错。
+\item 让两页含同一个记录编号，核对去重后的记录数。
+\item 比较“空页结束”和“\texttt{next} 为空结束”在接口异常时的不同后果。
+\end{enumerate}

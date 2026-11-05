@@ -1,0 +1,45 @@
+\chapter{XML 与 CSV：先识别格式}\label{ch:formats}
+\begin{tcolorbox}[title=章首知识地图,colframe=Ink]
+响应类型 $\longrightarrow$ 格式解析 $\longrightarrow$ 字段映射 $\longrightarrow$ 类型校验。
+\end{tcolorbox}
+
+\begin{tcolorbox}[title=学习目标与前置知识,colframe=Ink!65,colback=Ink!2]
+前置：字符编码和树结构。目标：先识别响应格式，再选解析器。\par
+输入：固定 XML 样本；输出：文章编号与标题。
+\end{tcolorbox}
+
+\section{别把所有响应都当 JSON}
+接口可能返回 JSON、XML、CSV、HTML 或二进制文件。内容类型头部提供线索，但仍应核对实际内容；有些服务错误时返回 HTML 页面，却沿用 JSON 接口地址。先识别格式，再调用对应解析器，能少收获许多“JSONDecodeError 的人生感悟”。
+
+\begin{method}{格式判断的四步}
+检查状态、内容类型、正文大小和可识别的结构。解析后验证顶层类型与必填字段；若与预期不同，保留脱敏样本并报告“格式异常”，不要把它归类为“零条数据”。
+\end{method}
+
+\section{XML 与命名空间}
+XML 用标签表达层级，命名空间可以区分同名标签。默认命名空间内的 \texttt{article} 不能用不带命名空间的 \texttt{findall("article")} 找到；示例用前缀映射取得两条记录，并在解析前检查状态与内容类型。缺标题会显式报错。
+
+\begin{example}{从 XML 取得文章列表}{基础}
+\VerbatimInput{examples/ch06_xml.py}
+\end{example}
+
+\section{CSV 与 JSON Lines 的落地差异}
+CSV 需要约定列顺序、字符编码与缺失值；JSON Lines 适合一行一条记录，便于持续写入，但仍要固定字段契约。大型任务按批写入并在完成后校验行数、唯一键数和可解析率。格式选得再漂亮，数据不对也只是精致地存错了。
+
+\begin{example}{中文记录的 CSV 与 JSON Lines 往返}{基础}
+\texttt{newline=""} 交给 CSV 模块处理换行，\texttt{encoding="utf-8"} 固定中文编码；JSON Lines 逐行写、逐行读。临时目录退出后自动清理。
+\VerbatimInput{examples/ch06_tabular.py}
+\end{example}
+
+\section{选读：GraphQL 与实时流}
+GraphQL 接口由查询文档指定字段，仍须遵守服务端授权、分页与复杂度限制。WebSocket、Server-Sent Events 等实时流适于持续事件，不宜套用“翻页直到空列表”的逻辑。先理解协议提供的停止与续接机制，再设计存储。
+
+\begin{tcolorbox}[title=本章验收,colframe=Teal,colback=Teal!3]
+运行 XML 与表格示例；XML 类型错误或缺标题时报错，CSV 与 JSON Lines 读回的两条中文记录一致。
+\end{tcolorbox}
+
+\section{练习}
+\begin{enumerate}[label=\arabic*.]
+\item 让 XML 样本缺少一个标题，写出你的缺失值处理策略。
+\item 说明为什么只凭 URL 后缀 \texttt{.json} 不能断定正文一定是 JSON。
+\item 为持续事件流设计一个断线重连后避免重复写入的键。
+\end{enumerate}

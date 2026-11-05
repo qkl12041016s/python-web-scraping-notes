@@ -1,0 +1,48 @@
+\chapter{并发与异步：快一点，也要稳一点}\label{ch:concurrency}
+\begin{tcolorbox}[title=章首知识地图,colframe=Ink]
+单请求耗时 $\longrightarrow$ 并发上限 $\longrightarrow$ 超时与失败 $\longrightarrow$ 吞吐量与负载。
+\end{tcolorbox}
+
+\begin{tcolorbox}[title=学习目标与前置知识,colframe=Ink!65,colback=Ink!2]
+前置：同步任务与等待。目标：理解并发上限与结果收集的边界。\par
+输入：五个离线等待任务；输出：五个有序结果。
+\end{tcolorbox}
+
+\section{并发不是免费午餐}
+请求的大部分时间可能花在等待网络上，因此多个等待可以交错进行。但并发数翻倍，不保证吞吐量翻倍；目标站点的限速、客户端连接数、解析耗时和磁盘写入都会成为瓶颈。跑得太快而得到一堆 429，只是把失败收集得更勤快。
+
+\begin{definition}{吞吐量与并发上限}
+吞吐量是单位时间内完成的有效记录数；并发上限是同时进行的任务数。应以有效记录和错误率评价效果，而非只看每秒发出多少请求。
+\end{definition}
+
+\section{用信号量限制同时运行的任务}
+\texttt{asyncio.Semaphore} 可限制进入某段异步代码的任务数。示例用睡眠模拟等待，避免对任何站点施压；\texttt{gather} 汇总任务结果。这个例子说明调度结构，不代表对真实站点已经实现礼貌访问。真实客户端还需要超时、连接池和按站点设定的节流策略。
+
+\begin{example}{离线并发演示}{基础}
+\VerbatimInput{examples/ch08_async.py}
+\end{example}
+
+\begin{example}{保留失败任务的编号}{基础}
+下面故意让编号 2 的任务超时。\texttt{return\_exceptions=True} 保留其他结果，再把异常与原任务编号配对；这不是“忽略异常”的许可证。
+\VerbatimInput{examples/ch08_failure.py}
+\end{example}
+
+\begin{method}{调参顺序}
+先用单请求确认数据正确，再设较低并发与明确超时，记录成功率和响应时间，最后缓慢调整。出现 429 或服务端明确要求等待时，应降低速率并遵从响应指示。快是结果，不是起点。
+\end{method}
+
+实际运行可把三道闸门叠在一起：全局信号量限制机器上的同时任务数；按主机名分别限制每秒请求数；429 或 503 后按服务端等待指示与退避策略放慢。只设全局并发数为 2，仍可能在一秒内对同一主机连续发出许多请求。
+
+\section{异步 HTTP 客户端的边界}
+异步库让等待可以重叠，但不会让 CPU 密集解析凭空变快。会话应复用，响应应及时读取或关闭，任务异常要收集并分类。多个任务共享状态时，去重集合和写入顺序需要设计；“用了 async”并不是并发安全证明。
+
+\begin{tcolorbox}[title=本章验收,colframe=Teal,colback=Teal!3]
+运行两段演示：正常样本得到 item-0 至 item-4；失败样本保留三条成功记录，并明确指出编号 2 超时。
+\end{tcolorbox}
+
+\section{练习}
+\begin{enumerate}[label=\arabic*.]
+\item 将示例的并发上限从 2 改为 1，比较总耗时。
+\item 让一个任务抛出异常，说明其他任务的处理策略应如何定义。
+\item 解释为何限制总并发数不能代替按站点控制请求频率。
+\end{enumerate}

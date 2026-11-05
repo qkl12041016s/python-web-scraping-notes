@@ -1,0 +1,43 @@
+\chapter{动态页面：先找数据，再开浏览器}\label{ch:browser}
+\begin{tcolorbox}[title=章首知识地图,colframe=Ink]
+初始 HTML $\longrightarrow$ 网络请求 $\longrightarrow$ 脚本渲染 $\longrightarrow$ 稳定定位与等待。
+\end{tcolorbox}
+
+\begin{tcolorbox}[title=学习目标与前置知识,colframe=Ink!65,colback=Ink!2]
+前置：DOM 与浏览器开发者工具。目标：判断何时确需浏览器，以及等待什么元素。\par
+输入：脚本插入的本地卡片；输出：标题 Ready。
+\end{tcolorbox}
+
+\section{页面空白，不代表数据不存在}
+有些页面把列表数据写在初始 HTML；有些通过 JSON 接口取得；还有些必须执行脚本才能形成 DOM。判断顺序应是：查看页面源码、观察网络面板、确认渲染后 DOM。若接口已经给出结构化数据，再让浏览器加载整页图片和脚本，通常是给小任务请来一辆搬家车。
+
+\begin{method}{定位动态内容}
+先找稳定容器或用户能感知的元素，再等待它出现；不要用固定睡眠时间猜页面何时完成。等待条件应对应数据目标，例如“文章卡片已出现”，而非仅仅“页面载入事件触发”。
+\end{method}
+
+\section{Playwright 的局部示例}
+下例用 \texttt{set\_content} 创建本地页面，脚本把卡片插入 DOM；定位器再读取卡片内容。需要先安装 \texttt{playwright} 并执行 \texttt{playwright install chromium}；已安装 Edge 的 Windows 机器也可把环境变量 \texttt{BROWSER\_CHANNEL} 设为 \texttt{msedge}。示例不访问外部网站。
+
+\begin{example}{读取脚本插入的卡片}{基础}
+\VerbatimInput{examples/ch10_browser.py}
+\end{example}
+
+卡片由 \texttt{setTimeout} 延迟插入。设置页面内容的方法返回时，目标卡片可能还没出现。定位器的 \texttt{wait\_for} 等待元素可见，比猜固定睡眠时间可靠；若仍超时，检查选择器和页面异常。
+
+\begin{warning}
+浏览器自动化能看到渲染结果，但不能代替数据质量检查。页面上一个数字可能是折扣价、原价或库存；选择器只负责找到它，不负责理解它。
+\end{warning}
+
+\section{会话、登录与访问控制}
+公开页面、授权账户页面和需要额外验证的资源应分开处理。对有权限的页面，优先使用站点支持的接口和正常登录流程；不要把 Cookie、令牌、浏览器存储或截图上传到公开仓库。遇到验证码和访问限制，应尊重站点要求，调整采集范围或申请接口权限。
+
+\begin{tcolorbox}[title=本章验收,colframe=Teal,colback=Teal!3]
+使用已安装的浏览器运行示例，输出 Ready。
+\end{tcolorbox}
+
+\section{练习}
+\begin{enumerate}[label=\arabic*.]
+\item 把示例中的卡片改为两张，修改定位器以逐张提取标题。
+\item 说明 \texttt{page.goto()} 完成后，为什么目标数据仍可能尚未出现。
+\item 比较直接请求 JSON 接口与浏览器渲染在速度、依赖和排错上的差别。
+\end{enumerate}

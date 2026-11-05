@@ -1,0 +1,43 @@
+\chapter{会话与授权：门票要从正门拿}\label{ch:sessions}
+\begin{tcolorbox}[title=章首知识地图,colframe=Ink]
+登录流程 $\longrightarrow$ Cookie 与令牌 $\longrightarrow$ 权限检查 $\longrightarrow$ 安全保存。
+\end{tcolorbox}
+
+\begin{tcolorbox}[title=学习目标与前置知识,colframe=Ink!65,colback=Ink!2]
+前置：请求头与 Cookie。目标：区分会话保持、认证和资源授权。\par
+输入：本地会话端点；输出：401 与 200 的对照。
+\end{tcolorbox}
+
+\section{会话解决的是什么问题}
+HTTP 请求彼此独立，站点可借 Cookie 或其他令牌把多次请求关联到同一会话。Requests 的 \texttt{Session} 会在后续请求中携带收到的 Cookie，并复用部分连接状态；它不会凭空取得权限。认证成功、身份有效、目标资源可访问，是三个需要分别确认的命题。
+
+Cookie 的发送还受域名、路径、有效期与 \texttt{Secure} 等属性约束。\texttt{SameSite} 主要约束浏览器中的跨站请求语境，不能把它当作 Python 客户端的授权证明。调试会话时先检查这些作用域，再看服务端是否仍承认登录状态。
+
+\begin{definition}{认证与授权}
+认证回答“你是谁”，授权回答“你能访问什么”。能登录一个账户，不表示可以自动批量取得站内所有数据。采集范围应符合账户权限、服务条款及数据使用约定。
+\end{definition}
+
+\section{在本地观察 Cookie 流转}
+示例在回环地址启动两个端点：一个设置演示 Cookie，一个检查后续请求是否带上它。演示令牌没有任何真实权限，脚本也不会访问外站。
+
+\begin{example}{比较有无 Session 的请求}{基础}
+\VerbatimInput{examples/ch15_session.py}
+\end{example}
+
+\begin{warning}
+Cookie、JWT 和访问令牌都可能是凭据。不要把它们写入截图、日志、仓库或论文附录。令牌格式不是安全性证明；即使内容可解码，也不等于可以伪造有效签名。
+\end{warning}
+
+\section{受保护页面的正常路线}
+优先使用站点正式提供的 API、OAuth 或导出功能。若需要浏览器会话，按正常流程登录，保存短期、最小权限的凭据，并在到期后重新授权。验证码、设备确认与访问限制是流程的一部分，不应默认视作“有待突破的技术题”。
+
+\begin{tcolorbox}[title=本章验收,colframe=Teal,colback=Teal!3]
+运行示例得到 401 200；日志不出现演示 Cookie。
+\end{tcolorbox}
+
+\section{练习}
+\begin{enumerate}[label=\arabic*.]
+\item 解释为什么直接调用受保护端点会返回 401，而同一 Session 的第二次请求成功。
+\item 给日志列出三项应该记录的会话事实，以及三项绝不能记录的秘密。
+\item 比较“认证成功”和“有权批量采集”之间缺少的判断。
+\end{enumerate}

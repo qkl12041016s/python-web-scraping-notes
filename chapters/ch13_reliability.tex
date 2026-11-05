@@ -1,0 +1,59 @@
+\chapter{稳定性与边界：给爬虫装刹车}\label{ch:reliability}
+\begin{tcolorbox}[title=章首知识地图,colframe=Ink]
+访问规则 $\longrightarrow$ 节流与重试 $\longrightarrow$ 检查点 $\longrightarrow$ 日志与质量指标。
+\end{tcolorbox}
+
+\begin{tcolorbox}[title=学习目标与前置知识,colframe=Ink!65,colback=Ink!2]
+前置：HTTP 状态与存储事务。目标：先确认访问范围，再安排节流、重试和检查点。\par
+输入：本地访问规则；输出：路径访问判断。
+\end{tcolorbox}
+
+\section{先看站点允许什么}
+采集前确认站点条款、公开接口和 robots 规则，避免访问不应自动获取的路径。\texttt{robots.txt} 是站点对自动客户端的访问规则表达，不是授权凭证；有身份验证的资源仍需合法权限。示例离线解析一段 robots 规则，说明“能否访问”应在请求前判断。
+
+robots 规则回答自动客户端可否访问某路径；服务条款约定服务的使用方式；API 契约约定接口参数、频率和数据用途；法律与隐私要求另行适用。四者不能互相充当通行证。
+
+\begin{example}{离线检查 robots 规则}{基础}
+\VerbatimInput{examples/ch13_robots.py}
+\end{example}
+
+\section{重试要有条件}
+暂时性网络错误可以有限次重试；明确的权限拒绝或字段结构错误不应盲目重试。重试应设置次数上限与间隔；遇到服务端限流提示应降低速率。没有上限的重试，是一台把同一个错误反复放大的复印机。
+
+\begin{center}\small
+\begin{tabularx}{\textwidth}{@{}p{.23\textwidth}p{.29\textwidth}X@{}}
+\toprule
+情况 & GET 等幂等请求 & POST 等写入型请求\\
+\midrule
+超时、502/503/504 & 有上限地退避重试；先核对接口约定 & 先查服务端是否已处理；有幂等键或明确契约才重放\\
+429 & 尊重 \texttt{Retry-After}；降速后有限重试 & 暂停并核对接口契约，不凭状态码直接重放\\
+401/403/404 & 停止并核对权限或资源地址 & 停止并核对权限或资源地址\\
+字段缺失、格式错误 & 保存脱敏样本并修解析器 & 保存脱敏样本并修解析器\\
+\bottomrule
+\end{tabularx}
+\end{center}
+\texttt{Retry-After} 既可能给出等待秒数，也可能给出 HTTP 日期；没有该头部时使用有上限的退避，不能无限重试。
+
+\begin{method}{一次运行至少记录什么}
+记录起始时间、目标范围、成功请求数、失败类别、提取记录数、去重后记录数和结束原因。日志中只保留必要上下文，不写明文令牌、个人信息或完整敏感响应。
+\end{method}
+
+\section{断点续跑与幂等}
+多页采集应保存进度与已写入的稳定键。重启后从最近安全检查点继续，并允许重复读取少量页面；存储层去重比祈祷进度恰好正确可靠。检查点应在数据写入成功后推进，否则可能把尚未保存的一页宣布为“已完成”。
+
+第\ref{ch:project}章的本地项目把记录和本页的 \texttt{next} 值放在同一个 SQLite 事务中提交。测试故意在第一页提交后中断，再用 \texttt{resume=True} 运行；第一页从检查点跳过，第二页补齐。若先写检查点再写记录，中断时就会留下“页已完成、数据却没保存”的假象。
+
+\begin{warning}
+不要把“程序退出码为 0”当作数据成功。空列表、漏页或字段全空都可能正常退出。验收应同时检查记录数、关键字段完整率和样本内容。
+\end{warning}
+
+\begin{tcolorbox}[title=本章验收,colframe=Teal,colback=Teal!3]
+运行 robots 示例；私有路径拒绝，公开路径允许。
+\end{tcolorbox}
+
+\section{练习}
+\begin{enumerate}[label=\arabic*.]
+\item 给 \texttt{/private/report} 与 \texttt{/public/report} 写出访问判断结果。
+\item 设计一个三次重试策略，说明哪些异常可以重试，哪些应立即停止。
+\item 解释检查点为何应在写入成功之后更新。
+\end{enumerate}

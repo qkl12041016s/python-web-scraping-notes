@@ -1,0 +1,43 @@
+\chapter{异步 HTTP：让等待重叠，让错误分明}\label{ch:async-http}
+\begin{tcolorbox}[title=章首知识地图,colframe=Ink]
+会话复用 $\longrightarrow$ 并发限制 $\longrightarrow$ 状态检查 $\longrightarrow$ 响应解析。
+\end{tcolorbox}
+
+\begin{tcolorbox}[title=学习目标与前置知识,colframe=Ink!65,colback=Ink!2]
+前置：第 8 章的协程与信号量。目标：复用客户端会话并逐项处理超时。\par
+输入：三个本地 JSON 端点；输出：三条编号记录。
+\end{tcolorbox}
+
+\section{从模拟等待走向真实客户端}
+第\ref{ch:concurrency}章用睡眠说明调度；现在用 \texttt{aiohttp} 向本地临时服务发出实际 HTTP 请求。异步函数在等待网络时交还执行权，但请求仍会占用服务端资源。信号量与超时缺一不可。
+
+\begin{example}{并发请求本地 JSON}{综合}
+\VerbatimInput{examples/ch09_async_http.py}
+\end{example}
+
+\begin{example}{部分成功与失败分类}{基础}
+本地服务分别返回成功、429、503 和延迟响应。每个任务保留名称与错误类别。aiohttp 的 \texttt{ClientTimeout} 中，\texttt{total} 约束整次操作；这与第 2 章 Requests 的读取超时不同。
+\VerbatimInput{examples/ch09_failures.py}
+\end{example}
+
+\begin{proof}
+所有任务共用一个客户端会话，避免每个请求都新建连接池。\texttt{async with} 使响应在离开代码块时正确释放；遇到错误状态，\texttt{raise\_for\_status()} 主动抛出异常。\texttt{gather} 按任务顺序返回结果，但网络完成顺序可以不同。顺序稳定来自结果聚合，不来自服务器按编号排队。
+\end{proof}
+
+\section{超时、取消与部分成功}
+真实采集要决定单个任务失败时整批停止，还是保留其他成功结果并记录失败项。示例选择后者：一条成功、三条失败；429 与 503 是状态错误，慢响应是超时。429 应按服务端等待指示降速，503 可按契约有限退避。取消任务时仍须释放响应与会话，写入前还要检查记录完整性。
+
+\begin{method}{异步改造前的核对}
+先确认单请求流程正确、目标站点允许的速率、连接数和超时含义；再引入并发。调参时观察有效记录每秒、失败率和服务端限流，不用“任务数越大越好”当指标。
+\end{method}
+
+\begin{tcolorbox}[title=本章验收,colframe=Teal,colback=Teal!3]
+运行正常示例得到编号 1、2、3；失败示例得到一条成功与三类明确的失败。
+\end{tcolorbox}
+
+\section{练习}
+\begin{enumerate}[label=\arabic*.]
+\item 将并发上限设为 1，比较用时与输出顺序。
+\item 让一个端点返回 503，说明应如何记录成功与失败的对应关系。
+\item 解释为何每个任务单独创建 \texttt{ClientSession} 不是好习惯。
+\end{enumerate}

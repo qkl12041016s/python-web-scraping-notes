@@ -1,0 +1,37 @@
+\chapter{文件下载与 OCR 边界}\label{ch:files}
+\begin{tcolorbox}[title=章首知识地图,colframe=Ink]
+资源地址 $\longrightarrow$ 流式读取 $\longrightarrow$ 大小与类型检查 $\longrightarrow$ 校验和与保存。
+\end{tcolorbox}
+
+\begin{tcolorbox}[title=学习目标与前置知识,colframe=Ink!65,colback=Ink!2]
+前置：字节流和散列。目标：下载后核对类型、字节数与内容摘要。\par
+输入：本地二进制资源；输出：大小和摘要校验结果。
+\end{tcolorbox}
+
+\section{二进制资源不是文本}
+图片、PDF 和压缩包应按字节处理。先检查响应状态、类型与大小，再写入临时文件，完成后计算摘要或校验文件格式。只凭扩展名判断内容，等于看见盒子上写着“苹果”就不打开验货。
+
+\begin{method}{保存文件的四步}
+限定允许的来源与类型；使用安全文件名和目标目录；分块写入并控制大小；完整写入后再把临时文件替换为正式文件。失败时保留错误类别，不留下半个冒充成品的文件。
+\end{method}
+
+\section{一个本地二进制传输示例}
+下面的服务只返回本地字节序列或一页 HTML。客户端先核对响应类型和声明大小，再把字节写入 \texttt{.part} 临时文件；实际大小与 SHA-256 通过后才用 \texttt{os.replace} 正式保存。类型不符、超限或摘要不符都会删除临时文件，不留下假成品。示例不从外站下载图片。
+
+\begin{example}{分块读取并校验}{基础}
+\VerbatimInput{examples/ch17_binary.py}
+\end{example}
+
+\section{选读：OCR 与验证码不是同一个任务}
+OCR 可用于识别公开资料中的扫描文本、图表标签等。其结果需要人工或规则校验：字符“0”和“O”长得亲近，数据表可不领情。验证码用于访问流程中的真人或风险验证；遇到它应按站点提供的正常方式处理，不能把批量自动识别当作默认采集步骤。
+
+\begin{tcolorbox}[title=本章验收,colframe=Teal,colback=Teal!3]
+运行示例，验证 22528 字节并正式保存；HTML 响应和超出大小上限的文件均不得生成正式文件。
+\end{tcolorbox}
+
+\section{练习}
+\begin{enumerate}[label=\arabic*.]
+\item 让示例声明一个错误的 \texttt{Content-Length}，说明客户端还需哪些完整性检查。
+\item 设计一个按内容摘要命名文件的方案，分析它对去重的帮助。
+\item 说明 OCR 识别结果为何需要抽样复核。
+\end{enumerate}

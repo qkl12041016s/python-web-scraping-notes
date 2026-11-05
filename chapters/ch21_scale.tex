@@ -1,0 +1,41 @@
+\chapter{任务队列与分布式边界}\label{ch:scale}
+\begin{tcolorbox}[title=章首知识地图,colframe=Ink]
+待访问队列 $\longrightarrow$ 工作者 $\longrightarrow$ 去重与写入 $\longrightarrow$ 失败重投与监控。
+\end{tcolorbox}
+
+\begin{tcolorbox}[title=学习目标与前置知识,colframe=Ink!65,colback=Ink!2]
+前置：去重键与幂等写入。目标：说明重复投递如何在存储层被消解。\par
+输入：含重复项的任务队列；输出：三条唯一记录。
+\end{tcolorbox}
+
+\section{为什么需要队列}
+当页面数量增加，待访问地址需要持久保存、分配给工作者并记录处理状态。队列把“发现新地址”和“处理地址”分开；多个工作者可以分担任务，但同时带来重复投递、顺序变化和故障恢复问题。
+
+\begin{definition}{至少一次处理与幂等}
+消息系统为了避免丢任务，可能把同一地址交给工作者不止一次。若重复处理不会产生重复结果，就称写入具有幂等性。分布式系统中不能只靠每个进程自己的 \texttt{set} 去重；唯一键或协调存储应提供共同约束。
+\end{definition}
+
+\section{单进程模拟重复投递}
+示例用线程和队列模拟多个工作者，队列里故意放入重复任务。它只演示“重复投递必须预期”这一点，并不是分布式爬虫；真正的跨机器队列还要处理确认、超时与持久化。
+
+\begin{example}{重复任务只计一次}{基础}
+\VerbatimInput{examples/ch21_queue.py}
+\end{example}
+
+\begin{method}{从单机扩展的顺序}
+先固定字段契约和单页解析测试，再让单机分页稳定运行；接着引入持久化队列与唯一键，最后才增加工作者。每扩一层，都记录吞吐量、失败率和站点负载。机器多了，错误也会组团出行。
+\end{method}
+
+\section{选读：智能抽取的适用位置}
+规则选择器适合结构稳定、字段明确的页面；结构多变时可以考虑模板分类、启发式或模型辅助提取。但“看起来像标题”仍需来源、字段类型与样本复核。智能抽取应负责提出候选，验收仍由明确的数据契约完成。
+
+\begin{tcolorbox}[title=本章验收,colframe=Teal,colback=Teal!3]
+运行单进程队列示例：同一次运行中重复任务只计一次，得到编号 1、2、3。跨次运行的持久去重由第\ref{ch:project}章的文件数据库验证。
+\end{tcolorbox}
+
+\section{练习}
+\begin{enumerate}[label=\arabic*.]
+\item 把同一任务放入队列三次，说明为何结果仍应只计一次。
+\item 解释进程内去重集合为何不能直接扩展到两台机器。
+\item 为模型辅助提取设计一项人工抽样复核指标。
+\end{enumerate}

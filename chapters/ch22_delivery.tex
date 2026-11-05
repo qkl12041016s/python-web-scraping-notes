@@ -1,0 +1,59 @@
+\chapter{测试、部署与维护：写完脚本只是开始}\label{ch:delivery}
+\begin{tcolorbox}[title=章首知识地图,colframe=Ink]
+固定样本 $\longrightarrow$ 回归测试 $\longrightarrow$ 配置与密钥 $\longrightarrow$ 定时运行 $\longrightarrow$ 质量报警。
+\end{tcolorbox}
+
+\begin{tcolorbox}[title=学习目标与前置知识,colframe=Ink!65,colback=Ink!2]
+前置：配置、日志与测试。目标：把秘密、运行参数和数据质量指标分开。\par
+输入：环境配置；输出：经过边界检查的设置。
+\end{tcolorbox}
+
+\section{测试应抓住真正的风险}
+爬虫最常见的回归不是程序报错，而是程序仍在运行，字段却悄悄错位。固定一小份脱敏 HTML 或 JSON 样本，断言记录数、必填字段、去重结果和分页停止位置；站点结构变化时，这些断言比“脚本能启动”更有用。
+
+\begin{method}{发布前的四项检查}
+运行单元样本与端到端本地案例；确认依赖版本和运行环境；核对日志不含凭据；在受控范围小批量试跑并人工核对结果。通过后再安排定时运行。
+\end{method}
+
+\section{配置与秘密分开}
+目标范围、超时、并发与输出目录属于配置，应有默认值和范围校验；令牌和口令属于秘密，应由环境变量或专门的密钥服务注入。日志只记录是否配置成功，不记录秘密的内容。示例用环境变量读取配置，并验证并发上限。
+
+\begin{example}{检查运行配置}{基础}
+\VerbatimInput{examples/ch22_config.py}
+\end{example}
+
+超时必须是正的有限数；\texttt{NaN} 与正无穷不能因为“没有小于等于零”就蒙混过关。设置 \texttt{CRAWL\_TIMEOUT=nan} 或 \texttt{inf} 运行时，应得到明确的 \texttt{ValueError}。
+
+\section{一次运行怎样交代结果}
+下例调用第\ref{ch:project}章的本地项目，输出机器可读取的 JSON 报表。\texttt{--simulate-failure} 让第二页返回 404，进程以非零状态退出；再用相同 \texttt{--db} 路径加 \texttt{--resume}，可从第一页已提交的检查点继续。定时器应根据退出码报警，并保存脱敏报表，不要把控制台上一行“已完成”当作数据验收。
+
+\begin{example}{失败退出、恢复与运行报表}{综合}
+\VerbatimInput{examples/ch22_run.py}
+\end{example}
+
+\begin{Verbatim}[numbers=none]
+python examples/ch22_run.py --db build/job.sqlite3 --simulate-failure
+python examples/ch22_run.py --db build/job.sqlite3 --resume
+python -m pytest -q tests/test_revision.py
+\end{Verbatim}
+第一条命令退出码为 1，错误报表写到标准错误；第二条退出码为 0，报表中 \texttt{resumed=1}、\texttt{pages=1}、\texttt{unique\_items=3}。Windows 任务计划程序或系统的定时任务只需从项目目录调用同一命令，并把标准输出、标准错误与退出码分别保存。调度器不负责替程序判定数据质量。
+
+\section{部署后看什么}
+定时任务应报告运行是否完成、抓取页数、唯一记录数、字段完整率和失败类型。连续出现零记录或字段缺失突增时，应暂停下游使用并保留脱敏样本排查。部署成功只说明程序到了服务器上，数据可靠还要另行验收。
+
+采集前写清数据保留期限：只留完成任务所需字段，到期删除原始响应与备份；日志中的敏感值在写入前脱敏。一次任务的最小报表包含请求数、成功数、失败分类、去重前后记录数、缺失字段数、停止原因和抽样核对结果。
+
+\begin{warning}
+依赖升级可能改变解析、重试或浏览器行为。记录可复现的版本，升级后先跑本地样本与小范围试采，不要让生产任务替你做第一位测试员。
+\end{warning}
+
+\begin{tcolorbox}[title=本章验收,colframe=Teal,colback=Teal!3]
+配置示例拒绝零并发、NaN 和无穷超时；运行脚本能报失败退出码、恢复进度及完整计数，自动化测试能复现。
+\end{tcolorbox}
+
+\section{练习}
+\begin{enumerate}[label=\arabic*.]
+\item 把 \texttt{CRAWL\_CONCURRENCY} 设为 0，解释示例为何拒绝启动。
+\item 设计“记录数突然降为零”的报警条件与排查顺序。
+\item 说明为什么日志审计与数据抽样都不能省略。
+\end{enumerate}

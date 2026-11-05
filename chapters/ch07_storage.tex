@@ -1,0 +1,40 @@
+\chapter{清洗与存储：让数据站稳}\label{ch:storage}
+\begin{tcolorbox}[title=章首知识地图,colframe=Ink]
+字段校验 $\longrightarrow$ 统一格式 $\longrightarrow$ 去重 $\longrightarrow$ 持久化 $\longrightarrow$ 可重跑。
+\end{tcolorbox}
+
+\begin{tcolorbox}[title=学习目标与前置知识,colframe=Ink!65,colback=Ink!2]
+前置：主键与事务。目标：区别原始值、清洗值、去重键与抓取时间。\par
+输入：两次相同记录写入；输出：一条唯一记录。
+\end{tcolorbox}
+
+\section{记录不是打印结果}
+打印一行看着正确，不等于一批数据能用。标题可能只有空格，日期可能有多种格式，链接可能带同页片段。定义记录结构后，先校验必填字段，再统一格式，最后存储。把校验放在写入之后，相当于先把箱子封好再数里面有没有货。
+
+\begin{method}{设计去重键}
+选择足以标识同一条记录的稳定字段，如来源站点与文章编号；没有编号时可考虑规范化后的详情 URL。标题不能单独当键：不同文章可以同名，同一篇文章也可能改标题。
+\end{method}
+
+\section{CSV、JSON Lines 与 SQLite}
+CSV 方便表格软件打开，但嵌套字段与类型信息需要额外约定；JSON Lines 一行一条 JSON，适于流式写入和逐行检查；SQLite 适于建立唯一约束与查询。文件格式由后续使用方式决定，不必一开始就搬来一套数据库集群。
+
+\begin{example}{可重跑的 SQLite 写入}{基础}
+示例写入 \texttt{build/ch07\_articles.sqlite3} 文件；运行两次，唯一键对应的记录仍只有一条。\texttt{CREATE TABLE IF NOT EXISTS} 允许重复启动，\texttt{ON CONFLICT ... DO UPDATE} 明确更新标题。\texttt{with db} 负责事务提交或回滚，\texttt{closing()} 才负责关闭连接。SQL 值通过占位符传入。
+\par\medskip
+\VerbatimInput{examples/ch07_sqlite.py}
+\end{example}
+
+\begin{warning}
+\texttt{INSERT OR IGNORE} 会忽略冲突，不会自动更新已变化的标题。本例采用更新策略；真实表结构改变时，\texttt{IF NOT EXISTS} 不会自动迁移旧表，仍须另写迁移步骤。能重跑与能追踪变化，是两回事。
+\end{warning}
+
+\begin{tcolorbox}[title=本章验收,colframe=Teal,colback=Teal!3]
+从项目根目录连续运行 SQLite 示例两次，两次均输出 1，且没有“表已存在”错误。
+\end{tcolorbox}
+
+\section{练习}
+\begin{enumerate}[label=\arabic*.]
+\item 把示例标题改成新值，再运行一次，查询同一键的标题如何更新；说明为何仅靠 \texttt{IF NOT EXISTS} 不能迁移旧表。
+\item 为记录增加抓取时间，区分“文章发布日期”和“本次观察时间”。
+\item 说明何时应保留原始响应样本，何时只保存清洗后的字段。
+\end{enumerate}

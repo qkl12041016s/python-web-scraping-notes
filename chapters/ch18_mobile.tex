@@ -1,0 +1,39 @@
+\chapter{移动端数据：先分清应用、接口与权限}\label{ch:mobile}
+\begin{tcolorbox}[title=章首知识地图,colframe=Ink]
+应用界面 $\longrightarrow$ 本地状态 $\longrightarrow$ 网络请求 $\longrightarrow$ 服务端数据。
+\end{tcolorbox}
+
+\begin{tcolorbox}[title=学习目标与前置知识,colframe=Ink!65,colback=Ink!2]
+前置：请求与响应结构。目标：用时间线定位行为，不凭 URL 名字猜。\par
+输入：脱敏 HAR 摘要；输出：方法、主机和状态。
+\end{tcolorbox}
+
+\section{移动应用也有分层}
+一个 App 可能把内容写在安装包内，也可能调用公开接口、授权接口或设备专用服务。先确认数据是从哪里来的，再决定使用官方导出、开发接口还是应用自身提供的功能。把每个移动端问题都叫“抓包问题”，好比把所有数学题都叫“算数问题”。
+
+\begin{method}{自有应用的调试路线}
+在有权限的应用和测试设备上，先使用平台提供的网络检查工具观察请求时间、地址、状态和数据量；再对照应用操作确认请求因果。导出的网络日志可能含令牌、设备标识和个人数据，分享前必须脱敏。
+\end{method}
+
+\section{用离线 HAR 摘要练习观察}
+HAR 是网络请求记录格式。示例只读取程序内置的脱敏样本，按开始时间排序，列出操作标记、方法、主机、状态和耗时。它不包含真实设备数据，也不尝试解密流量；同一 URL 先后出现时，时间与耗时比名字更能说明关联。
+
+分享 HAR 前逐项删除 \texttt{Cookie}、\texttt{Authorization}、URL 查询中的令牌、设备标识、请求正文中的个人信息和响应中的敏感字段；再从头打开导出文件复查一遍。截图遮住一角，并不能清除文件中的原始请求头。
+
+\begin{example}{汇总请求清单}{基础}
+\VerbatimInput{examples/ch18_har.py}
+\end{example}
+
+\section{从诊断走向采集的边界}
+自有 App 的网络检查用于定位性能或接口问题；第三方应用的数据采集需确认许可、账号权限和隐私范围。设备指纹、证书固定和安全校验属于服务端保护的一部分，不应为了取得数据而默认绕过。若有公开 API，优先使用它；没有则调整研究问题或申请授权。
+
+\begin{tcolorbox}[title=本章验收,colframe=Teal,colback=Teal!3]
+运行示例，输出两条带时间戳和耗时的请求摘要；分享前删去凭据和个人信息。
+\end{tcolorbox}
+
+\section{练习}
+\begin{enumerate}[label=\arabic*.]
+\item 说明页面操作与网络请求为什么要用时间线对应，而不能只靠 URL 名字猜测。
+\item 列出 HAR 分享前至少应检查的三类敏感字段。
+\item 为一项自有应用的接口调试写出“授权、样本、观察、验证”的步骤。
+\end{enumerate}

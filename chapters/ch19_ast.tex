@@ -1,0 +1,61 @@
+\chapter{AST 与脚本阅读：别拿剪刀修语法树}\label{ch:ast}
+\begin{tcolorbox}[title=章首知识地图,colframe=Ink]
+源代码 $\longrightarrow$ 语法树 $\longrightarrow$ 节点遍历 $\longrightarrow$ 局部变换 $\longrightarrow$ 行为对照。
+\end{tcolorbox}
+
+\begin{tcolorbox}[title=学习目标与前置知识,colframe=Ink!65,colback=Ink!2]
+前置：JavaScript 表达式。目标：只折叠数字字面量，保持运算符语义。\par
+输入：自写的常量表达式；输出：等价源码。
+\end{tcolorbox}
+
+\section{压缩、混淆与语义}
+压缩通常删去空白并缩短名字；混淆还可能改写控制流或把常量藏进计算。两者会增加阅读成本，却不自动改变程序的输入输出。阅读脚本先确认请求链与目标函数，再追踪参数的输入和输出；整份脚本一次性“还原”既不必要，也难验证。
+
+\begin{definition}{抽象语法树}
+AST 把源代码表示为语法节点与层级关系。节点类型、操作符、子节点和作用域比排版空格更稳定；因此分析“哪些加法的两侧都是数字”应遍历节点，而非在源码文本里全局替换字符 \texttt{+}。
+\end{definition}
+
+以 \texttt{total = price * count} 为例，赋值节点的右侧是乘法节点，乘法节点再连接两个标识符。代码缩成一行、空格被删掉，结构仍在；只靠字符串替换则可能误伤注释或同名文本。
+
+\begin{center}
+\begin{tikzpicture}[every node/.style={draw=Teal,rounded corners=2pt,fill=Teal!4,inner sep=4pt},level distance=13mm,sibling distance=29mm]
+\node {赋值}
+  child {node {total}}
+  child {node {乘法}
+    child {node {price}}
+    child {node {count}}};
+\end{tikzpicture}
+\end{center}
+
+\begin{warning}
+AST 展示的是语法结构，不会自动告诉你业务含义；混淆还可能引入控制流、动态属性和运行时计算。分析代码时应保留原始样本、逐步验证语义，避免把“看起来更短”当作“行为相同”。
+\end{warning}
+
+\section{一个只处理常量的局部变换}
+本例使用 Babel 解析自写的 JavaScript，只在加法或乘法两侧都是数字字面量、结果仍为有限数时折叠常量。\texttt{1e308 * 1e308} 会溢出为无穷大；若作用域内还有名为 \texttt{Infinity} 的变量，贸然生成该标识符会改变行为。先在 \texttt{examples} 目录执行 \texttt{npm ci}，再运行 \texttt{node ch19\_ast.js}。
+
+\begin{example}{从语法树得到 14}{进阶}
+\VerbatimInput{examples/ch19_ast.js}
+\end{example}
+
+\begin{proof}
+遍历使用退出阶段：先访问乘法子树，得到 $3\times4=12$；再回到加法父节点，得到 $2+12=14$。若在进入父节点时就尝试折叠，右侧仍是一个乘法节点，不能当作数字字面量。这个顺序来自树的依赖，不是编译器的脾气。
+\end{proof}
+
+\section{作用域与行为测试}
+同名标识符可能位于不同作用域；改写某个名字前要确认它绑定到哪个声明。局部转换应配输入输出测试，特别要检查边界值、副作用和异常路径。AST 工具能让变换更有依据，不能替代对程序语义的验证。
+
+\begin{warning}
+这里讨论的是代码阅读与自有样例的结构变换。遇到第三方保护机制，应遵守授权与访问边界；不要把“能改写语法树”误认为“有权绕过服务端限制”。
+\end{warning}
+
+\begin{tcolorbox}[title=本章验收,colframe=Teal,colback=Teal!3]
+执行 Node 示例，输出 \texttt{const total = 14;}；变量表达式与非有限结果均不参与折叠。
+\end{tcolorbox}
+
+\section{练习}
+\begin{enumerate}[label=\arabic*.]
+\item 把样例改为 \texttt{2 * (3 + 4)}，预测结果并运行验证。
+\item 为什么不能把 \texttt{price + tax} 折叠成常数？
+\item 写出“源代码变化但行为不变”至少需要检查的两类证据。
+\end{enumerate}

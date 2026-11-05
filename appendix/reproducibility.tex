@@ -1,0 +1,41 @@
+\chapter{示例复现索引}\label{app:repro}
+以下路径均从项目根目录起算。Python 3.12 的完整依赖版本见 \texttt{requirements-lock.txt}；第 19 章的 Node 依赖见 \texttt{examples/package-lock.json}。浏览器示例可选本机 Edge，或先安装 Playwright Chromium。命令与失败输出的细节见随书 \texttt{docs/} 目录中的复现矩阵。
+
+\begingroup\small
+\begin{longtable}{@{}p{.08\textwidth}p{.49\textwidth}p{.33\textwidth}@{}}
+\toprule
+章 & 运行文件 & 应观察到\\
+\midrule\endhead
+1 & \texttt{examples/ch01\_links.py} & 两条保序去重链接\\
+2 & \texttt{examples/ch02\_local\_requests.py}\newline\texttt{examples/ch02\_payloads.py} & 请求参数与中文编码\\
+3 & \texttt{examples/ch03\_cards.py} & 两张完整卡片\\
+4 & \texttt{examples/ch04\_xpath.py} & 标题与链接不串项\\
+5 & \texttt{examples/ch05\_cursor.py} & 本地 HTTP 翻页得 1—4\\
+6 & \texttt{examples/ch06\_xml.py}\newline\texttt{examples/ch06\_tabular.py} & 命名空间 XML；中文 CSV/JSONL\\
+7 & \texttt{examples/ch07\_sqlite.py} & 文件库两次运行仍一条\\
+8 & \texttt{examples/ch08\_async.py}\newline\texttt{examples/ch08\_failure.py} & 五条成功；失败编号 2\\
+9 & \texttt{examples/ch09\_async\_http.py}\newline\texttt{examples/ch09\_failures.py} & 429、503 与超时分类\\
+10 & \texttt{examples/ch10\_browser.py} & 延迟出现的 Ready\\
+11 & \texttt{examples/ch11\_spider.py}\newline\texttt{examples/ch11\_follow\_spider.py} & 跟进第二页，导出两条\\
+12 & \texttt{examples/ch12\_pipeline.py} & 空标题被丢弃\\
+13 & \texttt{examples/ch13\_robots.py} & 私有路径拒绝\\
+14 & \texttt{examples/ch14\_diagnostics.py} & 三种失败分别报告\\
+15 & \texttt{examples/ch15\_session.py} & 401 与 200\\
+16 & \texttt{examples/ch16\_retry.py} & GET 三次后成功或停止\\
+17 & \texttt{examples/ch17\_binary.py} & 文件验真，拒绝 HTML\\
+18 & \texttt{examples/ch18\_har.py} & 带时间与耗时的两条摘要\\
+19 & \texttt{examples/ch19\_ast.js} & \texttt{const total = 14;}\\
+20 & \texttt{examples/ch20\_pipeline.py} & 四条候选、三条唯一记录\\
+21 & \texttt{examples/ch21\_queue.py} & 同次重复任务只计一次\\
+22 & \texttt{examples/ch22\_config.py}\newline\texttt{examples/ch22\_run.py} & 配置边界与 JSON 运行报表\\
+\bottomrule
+\end{longtable}
+\endgroup
+
+\section*{失败路径的统一入口}
+从项目根目录执行 \texttt{python -m pytest -q}，测试会启动本地样本并检查具体数据。\texttt{tests/} 中的回归用例覆盖空标题、空编号、空链接、跨来源跳转、重复页和中断恢复。单独演示恢复时使用一条全新数据库路径：
+\begin{Verbatim}[numbers=none]
+python examples/ch22_run.py --db build/job.sqlite3 --simulate-failure
+python examples/ch22_run.py --db build/job.sqlite3 --resume
+\end{Verbatim}
+第一条命令失败退出，但第一页记录和检查点已经一起提交；第二条只补第二页，报表应显示 \texttt{resumed=1}、\texttt{pages=1}、\texttt{unique\_items=3}。本书的网络示例只访问本机回环地址，真实网站仍须单独确认授权、范围和数据用途。

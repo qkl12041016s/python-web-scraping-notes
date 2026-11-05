@@ -1,0 +1,61 @@
+\chapter{开始之前}
+本书面向会运行 Python 脚本、认识 HTML 标签和属性的读者。第一次接触 \texttt{venv} 也不要紧：本节把环境、源码和第一条结果接起来。示例只访问本地文件或本机回环地址，运行时不需要登录任何网站。
+
+\section*{随书文件在哪里}
+本 PDF 同目录配有 \texttt{Python网络爬虫\_随书源码.zip}；解压后进入 \texttt{book\_crawler} 目录。若只收到 PDF，请同时取得该源码包。源码包中保留了正文所展示的独立文件，PDF 和代码以同一版次为准。
+
+\begin{Verbatim}[numbers=none]
+book_crawler/
+  main.tex, preamble.tex       # 讲义入口与版式
+  examples/ch01_links.py       # 第一章示例
+  examples/common.py           # 本地 HTTP 服务的启动与关闭
+  examples/validation.py       # 响应及分页契约的可测函数
+  examples/fixtures/           # Scrapy 使用的固定页面
+  tests/                       # 成功和失败路径的自动化断言
+  requirements-lock.txt        # Python 3.12 完整依赖版本
+  examples/package-lock.json   # AST 示例的 Node 依赖版本
+\end{Verbatim}
+
+代码文件与 PDF 的例号同章对应，附录 B 列出路径和期望结果。\texttt{build/} 保存本地运行结果，不需要手工创建；程序会在需要时建立。执行命令前先确认终端当前目录含 \texttt{main.tex}，否则相对路径会指错地方。
+
+\section*{安装与第一条结果}
+已验证环境为 Python 3.12、Node.js 22、XeLaTeX 和项目锁文件所列的依赖。只读第一章时，标准库就够了；完成全书示例再安装依赖。Windows PowerShell：
+\begin{Verbatim}[numbers=none]
+cd book_crawler
+py -3.12 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements-lock.txt
+.\.venv\Scripts\python.exe examples/ch01_links.py
+\end{Verbatim}
+最后一行应得到两条链接，顺序如下；第二次出现的同一文章链接会被保序去重。
+\begin{Verbatim}[numbers=none]
+https://example.org/articles/intro
+https://example.org/articles/advanced
+\end{Verbatim}
+Linux 或 macOS 将 Python 可执行文件换为 \texttt{.venv/bin/python}；首次建立虚拟环境可用 \texttt{python3.12 -m venv .venv}。上面的 \texttt{example.org} 只是固定 HTML 中的链接文字，第一章不会向它发请求。
+
+\section*{浏览器、Node 与回归测试}
+第 10 章需要 Playwright 浏览器。Windows 已安装 Edge 时，在同一 PowerShell 窗口指定浏览器；否则安装 Chromium 并清除该环境变量：
+\begin{Verbatim}[numbers=none]
+$env:BROWSER_CHANNEL = 'msedge'
+# 若不用 Edge，则执行：
+Remove-Item Env:BROWSER_CHANNEL
+.\.venv\Scripts\python.exe -m playwright install chromium
+\end{Verbatim}
+第 19 章需 Node.js 22。安装并运行自写的 AST 示例：
+\begin{Verbatim}[numbers=none]
+cd examples
+npm ci
+cd ..
+node examples/ch19_ast.js
+\end{Verbatim}
+
+\begin{Verbatim}[numbers=none]
+.\.venv\Scripts\python.exe -m pytest -q
+\end{Verbatim}
+测试既检查预期输出，也检查空字段、404、重复游标和中断恢复等失败样本。常见启动问题按下面顺序排查：
+\begin{itemize}
+\item 缺少模块：核对 Python 是否来自新虚拟环境，再安装锁文件。
+\item 找不到 \texttt{examples/}：回到含 \texttt{main.tex} 的项目根目录。
+\item 浏览器启动失败：按上一段安装 Chromium，或指定本机 Edge。
+\end{itemize}
+依赖缺失不是“网站反爬”；这些示例根本没去外站。

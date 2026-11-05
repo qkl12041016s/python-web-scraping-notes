@@ -1,0 +1,57 @@
+\chapter{HTML 解析：别让选择器猜心思}\label{ch:html}
+\begin{tcolorbox}[title=章首知识地图,colframe=Ink]
+定位重复容器 $\longrightarrow$ 选择字段 $\longrightarrow$ 处理缺失 $\longrightarrow$ 核对样本。
+\end{tcolorbox}
+
+\begin{tcolorbox}[title=学习目标与前置知识,colframe=Ink!65,colback=Ink!2]
+前置：HTML 的标签与属性。目标：把选择器限制在每张卡片内部，识别缺失字段。\par
+输入：固定卡片页面；输出：标题和绝对链接。
+\end{tcolorbox}
+
+\section{先看结构，再写选择器}
+HTML 是树，不是排得整齐的文本表格。先找每条记录共同的父节点，再在该节点内部取标题、链接和日期。若从整页直接找第 17 个 \texttt{span}，页面插入一条广告，编号就会集体搬家。
+
+\begin{method}{选择器的三个检查}
+一看稳定性：优先有语义的标签或稳定属性；二看作用域：先定位记录，再找字段；三看数量：抽取结果应与页面中的记录数相符。对每个字段单独记录缺失，不要让一个空节点把整页都带走。
+\end{method}
+
+\section{CSS、XPath 与解析器}
+CSS 选择器适于按类名、属性和父子关系定位；XPath 适于更复杂的路径与条件表达式。两者只是定位语言，不能替代数据校验。Beautiful Soup 可用 \texttt{select()} 和 \texttt{select\_one()} 查询节点；\texttt{get\_text()} 取得文本，属性则从元素上读取。解析器的行为可能随 HTML 完整性和所选后端而变，结果应由测试样本固定。
+
+\begin{center}\small
+\begin{tabularx}{\textwidth}{@{}p{.31\textwidth}X@{}}
+\toprule
+CSS 写法 & 含义\\\midrule
+\texttt{article.card} & 同时是 \texttt{article} 标签、带 \texttt{card} 类\\
+\texttt{.card.featured} & 同一元素同时带两个类；类名顺序无关\\
+\texttt{article > h2} & 直接子节点；\texttt{article h2} 包含更深后代\\
+\texttt{a[href]} & 带 \texttt{href} 属性的链接；属性值仍可能为空\\
+\bottomrule
+\end{tabularx}
+\end{center}
+标题若写作 \texttt{<h2>Hi <em>there</em></h2>}，直接子文本只有一部分；\texttt{get\_text(" ", strip=True)} 才能保留嵌套文本的词间空格。\texttt{class="card featured"} 也不能按整个字符串精确匹配单一类名。
+
+\begin{example}{从本地卡片提取记录}{基础}
+示例先定位卡片，再读取标题和相对链接；缺少链接的卡片被明确跳过。运行前安装 Beautiful Soup 4。
+\par\medskip
+\VerbatimInput{examples/ch03_cards.py}
+\end{example}
+
+\begin{warning}
+\texttt{select\_one()} 找不到元素时返回空值；随后直接取属性会报错。真正的问题不是报错本身，而是悄悄用空字符串替代必填字段，最后把坏数据端庄地写进数据库。
+\end{warning}
+失败样本应同时覆盖“节点不存在”和“节点存在但内容全是空格”。两种情况都不能通过必填字段校验；对应断言见随书 \texttt{tests/test\_revision.py}。
+
+\section{何时使用正则表达式}
+正则适合从已定位的短文本中提取日期、编号或特定模式，不适合独自承担整页 HTML 结构解析。HTML 可能换行、嵌套、添加属性；用一个巨大表达式硬啃，通常比页面改版还先崩溃。
+
+\begin{tcolorbox}[title=本章验收,colframe=Teal,colback=Teal!3]
+运行示例得到两条记录；缺链接的卡片不会伪装成完整记录。
+\end{tcolorbox}
+
+\section{练习}
+\begin{enumerate}[label=\arabic*.]
+\item 给示例卡片加入一个无标题节点，写出你希望的缺失值策略。
+\item 将卡片容器类名从 \texttt{card} 改为 \texttt{entry}，验证测试是否能及时发现结构变化。
+\item 说明为何在每个卡片内部查找 \texttt{h2} 比对整页 \texttt{h2} 列表按序配对更可靠。
+\end{enumerate}

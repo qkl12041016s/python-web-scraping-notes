@@ -1,0 +1,63 @@
+\chapter{HTTP 请求：先把话说清楚}\label{ch:http}
+\begin{tcolorbox}[title=章首知识地图,colframe=Ink]
+URL 与参数 $\longrightarrow$ 请求方法与头部 $\longrightarrow$ 状态与正文 $\longrightarrow$ 超时和异常。
+\end{tcolorbox}
+
+\begin{tcolorbox}[title=学习目标与前置知识,colframe=Ink!65,colback=Ink!2]
+前置：第 1 章的目标字段。目标：分开检查请求、状态、格式与业务字段。\par
+输入：本地 JSON 端点；输出：经过状态和字段校验的记录。
+\end{tcolorbox}
+
+\section{一次请求到底带了什么}
+URL 指向资源，查询参数负责筛选；请求方法说明要做什么，头部补充客户端能力与上下文。响应状态说明服务器如何处理请求，响应头说明正文类型等信息，正文才是待解析的数据。把这几层混在一起，排错时就像把快递地址写在包裹里的说明书上。
+
+\begin{definition}{可重复的请求}
+能复现的请求至少记录：方法、最终 URL、查询参数、必要头部、请求体（若有）、超时设置与响应状态。带认证信息的请求还要记录认证方式，但不得把口令或令牌写入日志与笔记。
+\end{definition}
+
+\begin{warning}
+看见状态码 200 只能说明这次 HTTP 交互取得了一个成功响应，不能证明正文就是目标数据。错误页、空列表或登录页也可能作为正常页面返回。先看响应格式，再验证字段。
+\end{warning}
+
+\section{Requests 的最小可靠写法}
+Requests 的 \texttt{params} 会为查询参数编码；\texttt{raise\_for\_status()} 将客户端或服务器错误转成异常；\texttt{timeout} 应显式设置。这里的超时并非整次下载的绝对总时长。若脚本卡住，只祈祷网络恢复不是故障处理方案。
+
+\begin{method}{连接超时与读取超时}
+\texttt{timeout=(2, 5)} 中，前者约束建立连接时的等待，后者约束接收数据时的等待。读取超时关注相邻字节之间的等待；服务端持续缓慢发送数据时，整次下载仍可能超过 5 秒。确需总时限，应在任务调度层另设截止时间。
+\end{method}
+
+\begin{example}{请求本地 JSON 服务}{基础}
+示例在本机启动临时 HTTP 服务，再用 Requests 请求并校验响应。没有外部网站，也不需要猜测演示站是否还在线。
+\par\medskip
+\VerbatimInput{examples/ch02_local_requests.py}
+\end{example}
+
+\section{参数、请求体与中文编码}
+\texttt{params} 进入 URL 查询串；\texttt{data} 发送表单正文；\texttt{json} 发送 JSON 正文并设置相应内容类型。三者不会因为都写着“中文”就变成同一种请求。读取中文 HTML 时，\texttt{response.content} 是原始字节，\texttt{response.text} 依响应声明的编码解码；声明缺失或错误时，核对字节后显式设定编码，别把乱码当作网页原文。
+
+\begin{example}{三种参数与 UTF-8 字节}{基础}
+本地端点回显请求的查询串与正文类型，另有一个故意不声明编码的中文页面。运行后应分别看到查询参数、表单类型、JSON 类型与“你好，爬虫”。
+\VerbatimInput{examples/ch02_payloads.py}
+\end{example}
+
+\begin{method}{把失败分成三层}
+连接失败或超时：检查网络、域名和超时；HTTP 错误：检查状态与接口约定；字段错误：保存脱敏后的样本响应并核对解析器。不要用一个裸 \texttt{except} 把三种问题都改写成“未找到数据”。
+\end{method}
+
+\section{会话与重定向}
+同一批请求往往共享头部、Cookie 与连接池。\texttt{Session} 可以承载这些状态，但它不是“自动登录器”：认证是否成功，仍要看服务器返回的内容。请求可能重定向，访问控制也可能在跳转后变化，因此记录最终 URL 很有价值。
+
+\begin{examtip}
+先用浏览器开发者工具确认页面实际请求，再写 Python。若页面内容由接口返回，应分析公开可用的接口响应；若只是 HTML 已含数据，先解析 HTML。浏览器自动化是更重的工具，不必每次都请它上场。
+\end{examtip}
+
+\begin{tcolorbox}[title=本章验收,colframe=Teal,colback=Teal!3]
+运行两段本地服务示例；指出查询参数、表单正文、JSON 正文及中文页面的解码依据。
+\end{tcolorbox}
+
+\section{练习}
+\begin{enumerate}[label=\arabic*.]
+\item 将示例的 \texttt{page=1} 改为 \texttt{page=2}，观察服务器收到的查询字符串。
+\item 让本地服务返回 404，说明 \texttt{raise\_for\_status()} 会在哪一步抛出异常。
+\item 解释为何打印 \texttt{response.text} 不能替代检查 \texttt{response.headers} 和目标字段。
+\end{enumerate}

@@ -1,0 +1,50 @@
+\chapter{Scrapy：把重复劳动交给框架}\label{ch:scrapy}
+\begin{tcolorbox}[title=章首知识地图,colframe=Ink]
+Spider 产出请求 $\longrightarrow$ 下载器取得响应 $\longrightarrow$ 回调解析 $\longrightarrow$ Item 输出。
+\end{tcolorbox}
+
+\begin{tcolorbox}[title=学习目标与前置知识,colframe=Ink!65,colback=Ink!2]
+前置：选择器和请求调度。目标：分清 Spider 的解析责任和导出责任。\par
+输入：本地 HTML 文件；输出：一条 Scrapy 记录。
+\end{tcolorbox}
+
+\section{什么时候值得使用框架}
+单页采集用脚本往往足够；当任务涉及多页调度、去重、重试、导出和运行监控时，框架能统一这些重复环节。框架不会替你判断字段是否正确，也不会替你理解目标站点。把它当成一支训练有素的队伍，而不是会读心的队伍。
+
+\begin{definition}{Spider 的两类产物}
+解析回调可以产生数据记录，也可以产生后续请求。前者进入导出或管道，后者进入调度器。把“这一页的记录”和“下一页的地址”区分开，递归抓取才不会变成无底洞。
+\end{definition}
+
+\section{一个只读本地文件的 Spider}
+下例从本地 HTML 文件读取一张卡片，避免把测试寄托在外站状态上。先安装 \texttt{scrapy}，在项目目录运行 \texttt{scrapy runspider examples/ch11\_spider.py -O output.jsonl}；输出文件可在运行后检查。
+
+\begin{example}{提取本地文章卡片}{基础}
+\VerbatimInput{examples/ch11_spider.py}
+\end{example}
+
+\begin{example}{跟进第二页并启用 Pipeline}{综合}
+两个固定 HTML 文件位于 \texttt{examples/fixtures/}；第二页故意有一条空标题。Spider 通过 \texttt{response.follow} 取得后续页面，\texttt{custom\_settings} 启用第\ref{ch:pipeline}章的清洗组件。从项目根目录运行：
+\begin{Verbatim}[numbers=none]
+python -m scrapy runspider examples/ch11_follow_spider.py -O build/follow.jsonl
+\end{Verbatim}
+输出文件应恰有两条有效记录。
+\VerbatimInput{examples/ch11_follow_spider.py}
+\end{example}
+
+\begin{method}{项目级设置}
+对真实站点，明确允许域名、遵守 robots 规则、设置下载延迟与并发上限，保存必要日志。先让一页数据通过字段验证，再放开多页调度。把错误规模化，不算工程化。
+\end{method}
+
+\section{Item、Pipeline 与导出}
+Spider 负责发现与解析；Pipeline 适合做字段校验、清洗和持久化；Feed Export 可把记录输出到 JSON Lines 等格式。若所有转换都塞进 \texttt{parse()}，回调会慢慢长成一棵难以修剪的树。
+
+\begin{tcolorbox}[title=本章验收,colframe=Teal,colback=Teal!3]
+运行单页和跟进第二页两种 Spider；前者导出一条，后者导出两条有效记录，空标题被 Pipeline 丢弃。
+\end{tcolorbox}
+
+\section{练习}
+\begin{enumerate}[label=\arabic*.]
+\item 在样本 HTML 中加入第二张卡片，验证导出记录数。
+\item 给记录增加必填字段校验，比较在 Spider 内与 Pipeline 内处理的优缺点。
+\item 说明 \texttt{response.css(...).get()} 在找不到元素时的返回值，以及你的处理策略。
+\end{enumerate}

@@ -29,7 +29,7 @@
 
 ## 下载与目录
 
-到 [Releases](https://github.com/qkl12041016s/python-web-scraping-notes/releases/latest) 下载 `Python网络爬虫_从请求到数据.pdf`。如果要运行书中代码，请一并下载 `Python网络爬虫_随书源码.zip`；仓库中的源码与压缩包内容对应。
+到 [Releases](https://github.com/qkl12041016s/python-web-scraping-notes/releases/latest) 下载 `Python-Web-Scraping-Notes.pdf`。如果要运行书中代码，请一并下载 `Python-Web-Scraping-Source.zip`；仓库中的源码与压缩包内容对应。
 
 ```text
 book_crawler/

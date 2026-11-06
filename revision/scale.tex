@@ -1,0 +1,16 @@
+\section{补充：BloomFilter 与可恢复任务队列}\label{rev:crawler:redis}
+BloomFilter 用位数组和多个哈希函数判断成员关系。在没有删除及实现错误等前提下，回答“不存在”可作为不存在证据，回答“存在”可能是假阳性。插入 $n$ 个元素、位数 $m$、哈希数 $k$ 时，常用近似误报率为 $(1-e^{-kn/m})^k$，较优 $k\approx(m/n)\log2$。不能仅凭“可能存在”就永久丢弃必须完整采集的任务。
+\begin{Verbatim}
+# Redis 需支持 BF.*；以下是 redis-cli 终端命令。
+BF.RESERVE notes:demo:bloom 0.001 100000
+BF.ADD notes:demo:bloom fixture:1
+BF.EXISTS notes:demo:bloom fixture:1
+\end{Verbatim}
+可用 BloomFilter 降低精确集合的查询量，最终完整性仍由精确键与幂等结果存储保证。BF.RESERVE 的容量是设计参数，不是数据库行数承诺；服务端是否提供 BF.* 应先检查，不能认为每个旧版 Redis 都内置。
+
+\subsection{结果提交后确认，崩溃后重新接管}
+Redis Streams 消费组维护待确认列表。工作者读取后，先完成幂等结果写入并提交，再 XACK；若在提交后、确认前崩溃，重投会发生，但唯一键防止重复结果。XAUTOCLAIM 可接管空闲时间超过阈值的待确认消息；阈值要高于正常处理时间，长任务还需续租或其他协调，防止两名工作者同时处理。
+\VerbatimInput{examples/revision/redis_resume.py}
+这是可连接本机 Redis 6.2+ 的教学骨架：先执行 seed，再执行 work，三条消息最终对应两条唯一结果。示例每次只取一批，新任务较多时要循环 work。SQLite 文件只演示同机持久化结果；跨机器应改用共享的事务数据库及唯一键，不能让每台机器各存一份 SQLite 后声称全局去重。
+发生异常的消息保持未确认，达到空闲阈值后可重取；正式部署还需重试上限、死信队列、监控、Redis 持久化与恢复演练，且不能随意裁剪尚未处理的 Stream。该骨架不提供恰好一次的跨系统事务保证。本次做了源码检查，Redis 服务联调步骤在随书验收说明中单列。
+概念与接管语义参见 \href{https://redis.io/docs/latest/develop/data-types/probabilistic/bloom-filter/}{Redis BloomFilter} 与 \href{https://redis.io/docs/latest/commands/xautoclaim/}{XAUTOCLAIM 官方文档}。

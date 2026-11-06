@@ -1,0 +1,34 @@
+{
+  "version": "v1.1.0",
+  "date": "2026-11-07",
+  "pages": {
+    "crawler": 86
+  },
+  "validation_scope": "Targeted new formulas and examples; not a new proof audit of every original exercise.",
+  "pdf_checks": {
+    "crawler": {
+      "pages": 86,
+      "overfull_hbox": 0,
+      "overfull_vbox": 0,
+      "missing_glyph": 0,
+      "undefined_references": false,
+      "placeholder_double_question_marks": 0
+    }
+  },
+  "pytest_passed": 60,
+  "browser_dependency_failure_paths_passed": 4,
+  "unverified_optional_services": [
+    "Redis/BloomFilter integration",
+    "curl_cffi owned TLS endpoint"
+  ],
+  "independent_checkout_builds": {
+    "crawler": {
+      "pages": 86,
+      "clean_log": true,
+      "all_page_text_matches_reviewed_pdf": true
+    }
+  },
+  "readme_and_revision_local_links_ok": true,
+  "python_source_syntax_passed": 38,
+  "repository_and_book_names_unchanged": true
+}

@@ -1,0 +1,16 @@
+\section{协议诊断：TLS、JA3/JA4 与 HTTP/2 特征}\label{rev:crawler:tls}
+User-Agent 只是 HTTP 请求头。TLS 握手包含密码套件、扩展与协商信息，HTTP/2 还有 SETTINGS 等协议特征；修改请求头不会同步修改这些层次。JA3 和 JA4 是对连接特征进行归纳的方法，属于诊断信号，不是“某个指纹就必定被拦”的充分条件。服务器还可能结合会话、请求频率、IP、行为及其他规则判断。
+
+排查顺序是先确认权限、URL、证书、代理、状态码和限流反馈，再在获准的测试环境比较不同客户端的握手与协议协商。不能把所有 403 都归因于 TLS 指纹。curl\_cffi 基于 libcurl 的相关实现提供浏览器特征模拟能力，可用于兼容性验证；其配置与支持的浏览器标识依版本而变，不应假定 BoringSSL 封装本身就能自动通过所有校验。
+\begin{Verbatim}
+# 可选示意：将地址替换为自己管理的 TLS 测试端点。
+from curl_cffi import requests as curl_requests
+
+def probe(owned_url):
+    response = curl_requests.get(
+        owned_url, impersonate="chrome", timeout=10
+    )
+    response.raise_for_status()
+    return response.status_code
+\end{Verbatim}
+上面仅给出调用骨架，本次没有连接外部反爬服务，也没有将“请求成功”等同于某种通用通行能力。应保存客户端版本、协商协议与服务端诊断日志，避免仅凭一次状态码下结论。接口与范围见 \href{https://github.com/lexiforest/curl_cffi}{curl\_cffi 官方项目}。

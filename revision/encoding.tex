@@ -1,0 +1,8 @@
+\section{编码补充：声明、原始字节与启发式探测}\label{rev:crawler:encoding}
+\texttt{response.content} 是原始字节；\texttt{response.encoding} 是文本解码所使用的编码设置。
+
+\texttt{response.apparent\_encoding} 给出基于内容的启发式猜测。Requests 的常见实现使用 charset\_normalizer 或 chardet，具体依版本、平台和安装依赖而异；不能把 cchardet 写成它的固定默认后端。
+出现乱码时先保存原始字节，比较 HTTP Content-Type、BOM、HTML meta 声明与页面实际字符，再决定解码方式。可信的协议声明和已确认的站点编码应优先保留；apparent\_encoding 适合声明缺失或已知错误时辅助排查，不能保证猜对短文本或混合编码。改变 encoding 只影响之后的文本解码，不会重新下载。
+\VerbatimInput{examples/revision/encoding_demo.py}
+本例在内存中构造声明与字节不一致的响应，显示声明、猜测和最终采用的编码。已知样例由 GB18030 编码，因此显式指定它并严格解码。生产中应记录判定依据；直接 errors=ignore 会悄悄丢字，不宜作为数据清洗默认方案。
+实现依据见 \href{https://requests.readthedocs.io/en/latest/_modules/requests/models/}{Requests Response 源码文档}。

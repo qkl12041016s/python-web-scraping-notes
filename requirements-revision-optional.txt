@@ -1,0 +1,7 @@
+# Optional dependencies for the added revision examples.
+# Install only the chapter you need; create a tested lock file for deployment.
+requests
+playwright
+fonttools
+redis
+curl_cffi

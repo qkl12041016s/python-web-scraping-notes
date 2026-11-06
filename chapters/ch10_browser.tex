@@ -25,6 +25,10 @@
 卡片由 \texttt{setTimeout} 延迟插入。设置页面内容的方法返回时，目标卡片可能还没出现。定位器的 \texttt{wait\_for} 等待元素可见，比猜固定睡眠时间可靠；若仍超时，检查选择器和页面异常。
 
 \begin{warning}
+安装 Python 包不等于已经安装浏览器内核。示例现在区分缺包、浏览器启动失败和后续页面等待失败：前两者显示当前解释器的安装命令或渠道设置，返回非零退出状态；不会悄悄跳过后打印 Ready。Playwright升级后可能需要重新安装匹配内核；Linux还可能需要系统依赖，按官方文档使用 install --with-deps。选择了 msedge 或 chrome 后，应确认对应浏览器已安装，不能把任意启动错误都归结为缺少 Chromium。\href{https://playwright.dev/python/docs/browsers}{Playwright浏览器文档}
+\end{warning}
+
+\begin{warning}
 浏览器自动化能看到渲染结果，但不能代替数据质量检查。页面上一个数字可能是折扣价、原价或库存；选择器只负责找到它，不负责理解它。
 \end{warning}
 
@@ -41,3 +45,5 @@
 \item 说明 \texttt{page.goto()} 完成后，为什么目标数据仍可能尚未出现。
 \item 比较直接请求 JSON 接口与浏览器渲染在速度、依赖和排错上的差别。
 \end{enumerate}
+
+\input{revision/browser}

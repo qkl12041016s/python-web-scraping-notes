@@ -1,0 +1,11 @@
+\section{专题：字体映射、坐标与浏览器调用链}\label{rev:crawler:font}
+自定义字体会使 DOM 字符与屏幕字形不一致。对自己维护的页面，先在 Network 中定位 WOFF/WOFF2 文件，检查响应版本和缓存，再用 fontTools.ttLib.TTFont 的 getBestCmap 观察码点到字形名的映射。cmap 只说明选哪个字形；字形名可能无语义，不能仅凭 glyph00012 就猜出它对应数字十二。WOFF2 读取还可能需要 Brotli 依赖。
+SVG 字形或轮廓同样需要已知标注、可信对照或人工复核。已确认的映射应按字体文件哈希保存，不把上次映射永久套到新版本。下例用自建私用区字符映射演示解码，并允许检查本地字体；它没有宣称可以自动识别任意网站字体。
+\VerbatimInput{examples/revision/font_and_motion.py}
+
+\subsection{坐标与轨迹：在自有测试控件上核对}
+截图像素、CSS 像素、视口坐标及页面坐标需要区分；设备像素比、缩放与滚动都会影响转换。本例 motion 使用 $x(s)=L(3s^2-2s^3)$（$0\le s\le1$）生成起止速度为零的平滑位移，适合验证本机滑动控件的坐标与端点。它只是确定性的 UI 测试曲线，并不构成验证码识别或通过率保证。
+
+\subsection{DevTools 调用栈与本地 RPC}
+在自有页面中，先用 Network 的 Initiator 查找请求发起位置，再设 Fetch/XHR 断点，复查暂停时的参数、调用栈和异步边界。需要确认执行结果时，优先编写可重复的本机样例，而不是复制来源不明的压缩脚本。
+前一节 Playwright 示例把自建的 window.notesRPC 作为函数入口，page.evaluate 传入 JSON 并取回 JSON。这就是一个最小的宿主到页面调用边界。进一步改成 WebSocket/RPC 服务时，需要请求编号、超时、版本、错误返回、断线重连与调用白名单。Sekiro 一类桥接工具属于这种工程方案，采用前须按其当前文档核对授权、协议及维护状态；本书提供的可运行入口是本地 Playwright 示例，不声称验证过第三方桥接服务。

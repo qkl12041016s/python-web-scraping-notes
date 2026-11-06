@@ -1,0 +1,8 @@
+\section{补充：Playwright 的路由、响应等待与生命周期}\label{rev:crawler:playwright}
+Selenium 与 Playwright 都可用于浏览器自动化。选型看现有项目、浏览器覆盖、运维条件与团队经验，不把一种工具概括为所有生产场景的唯一选择。Playwright 提供同步和异步接口；异步调用都须 await，浏览器上下文适合隔离不同会话。
+
+下例完全使用本机地址与内存路由。根页面和 API 都由 route.fulfill 返回，无须外部网站；接口返回与页面交互可重复验证。先注册等待响应的上下文，再点击按钮，避免请求已结束才开始监听。关闭 Service Worker 可避免它接管请求而使路由观察遗漏。
+\VerbatimInput{examples/revision/playwright_routes.py}
+安装 Playwright 包后，可用终端命令 python -m playwright install chromium 准备浏览器；也可将环境变量 BROWSER\_CHANNEL 设为 msedge，使用已安装的 Edge。本次运行验证采用后者。运行应输出状态 200、标题 Local notes，以及 RPC 返回的 notes。page.route 适合页面范围，context.route 覆盖上下文；对真实响应可用 response.json 读取结构化数据，不必总从渲染后的 DOM 抠文本。
+在脚本入口外，使用 TaskGroup 管理多个页面时仍应限制上下文数量，并在异常和取消路径关闭页面与浏览器。路由只是测试和观测机制，不保证消除站点的访问限制。
+API 细节见 \href{https://playwright.dev/python/docs/network}{Playwright 网络文档}。
